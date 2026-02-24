@@ -1,15 +1,16 @@
+use std::sync::Arc;
 use crate::models::{Nodeinfo, WellKnown};
-use reqwest::Url;
+use reqwest::{Client, Url};
 
 pub async fn fetch_instance(
     instance: String,
-    http_client: &reqwest::Client,
+    http_client: Arc<Client>,
 ) -> Result<(Option<Nodeinfo>, Vec<String>), anyhow::Error> {
     println!("Fetching instance: {}", instance);
-    let well_known = fetch_well_known(instance.clone(), http_client).await?;
+    let well_known = fetch_well_known(instance.clone(), http_client.clone()).await?;
 
     let nodeinfo = if let Some(link) = well_known.links.first() {
-        fetch_nodeinfo(&link.href, http_client).await.ok()
+        fetch_nodeinfo(&link.href, http_client.clone()).await.ok()
     } else {
         None
     };
@@ -20,7 +21,7 @@ pub async fn fetch_instance(
 
 pub async fn fetch_well_known(
     instance: String,
-    http_client: &reqwest::Client,
+    http_client: Arc<Client>,
 ) -> Result<WellKnown, anyhow::Error> {
     let url = format!("https://{}/.well-known/nodeinfo", instance,);
     let url = Url::parse(&*url)?;
@@ -37,7 +38,7 @@ pub async fn fetch_well_known(
 
 pub async fn fetch_peers(
     instance: String,
-    http_client: &reqwest::Client,
+    http_client: Arc<Client>,
 ) -> Result<Vec<String>, anyhow::Error> {
     let url = format!("https://{}/api/v1/instance/peers", instance);
     let url = Url::parse(&*url)?;
@@ -54,7 +55,7 @@ pub async fn fetch_peers(
 
 pub async fn fetch_nodeinfo(
     url: &str,
-    http_client: &reqwest::Client,
+    http_client: Arc<Client>,
 ) -> Result<Nodeinfo, anyhow::Error> {
     let url = Url::parse(url)?;
 
