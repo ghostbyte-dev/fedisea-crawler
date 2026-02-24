@@ -5,15 +5,16 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::{ReceiverStream, UnboundedReceiverStream};
+use futures::StreamExt;
 
 #[tokio::main]
 async fn main() {
     let now = SystemTime::now();
 
-    let seed = "pixelfed.social";
-    let mut to_visit: VecDeque<String> = VecDeque::new();
+    let seed = "techhub.social";
     let mut found_urls: HashSet<String> = HashSet::new();
-    to_visit.push_back(seed.to_string());
     found_urls.insert(seed.to_string());
     let mut index = 0;
 
@@ -30,28 +31,42 @@ async fn main() {
         .build()
         .expect("reqwest client failed");
 
-    while let Some(url) = to_visit.pop_front() {
-        if index > 200 {
+    let (tx, rx) = mpsc::unbounded_channel::<String>();
+
+    tx.send(seed.to_string()).expect("send failed");
+
+    let mut stream = UnboundedReceiverStream::new(rx)
+        .map(|url: String| {
+            let client = http_client.clone();
+            async move {
+                (url.clone(), fetch_instance(url, &client).await)
+            }
+        })
+        .buffer_unordered(20);
+
+    while let Some((url, result)) = stream.next().await {
+        if index >= 200 {
             break;
         }
-        let peers = match fetch_instance(url, &mut file, &http_client).await {
-            Ok(peers) => peers,
-            Err(_) => continue,
-        };
 
-        let missing: Vec<String> = peers
-            .iter()
-            .filter(|peer| !found_urls.contains(*peer))
-            .cloned()
-            .collect();
+        match result {
+            Ok(peers) => {
+                save_data(url, &mut file);
 
-        to_visit.extend(missing.clone());
-        found_urls.extend(missing);
-
-        println!("queue size: {}", to_visit.len());
-        index = index + 1;
+                for peer in peers {
+                    if found_urls.insert(peer.clone()) {
+                        let _ = tx.send(peer);
+                    }
+                }
+                index += 1;
+                println!("Processed: {}/200 | Queue hidden in channel", index);
+            }
+            Err(e) => {
+                eprintln!("Error fetching {}: {}", url, e);
+            }
+        }
     }
-
+    
     match now.elapsed() {
         Ok(elapsed) => {
             println!("{} sec", elapsed.as_secs());
@@ -64,34 +79,24 @@ async fn main() {
 
 async fn fetch_instance(
     instance: String,
-    file: &mut File,
     http_client: &reqwest::Client,
 ) -> Result<Vec<String>, anyhow::Error> {
     println!("Fetching instance: {}", instance);
     let well_known = fetch_well_known(instance.clone(), http_client).await?;
 
-    println!("Got well known rel: {}", well_known.links[0].rel);
-
     let nodeinfo = fetch_nodeinfo(&*well_known.links[0].href, http_client)
         .await
         .ok();
 
-    if let Some(nodeinfo) = nodeinfo {
-        println!("Got software: {}", nodeinfo.software.name);
-        save_data(instance.clone(), nodeinfo, file);
-    }
-
     let peers = fetch_peers(instance, http_client).await?;
-
-    println!("Got peers length: {}", peers.len());
     Ok(peers)
 }
 
-fn save_data(instance: String, nodeinfo: Nodeinfo, file: &mut File) {
+fn save_data(instance: String, file: &mut File) {
     writeln!(
         file,
-        "instance: {}, {}: {}",
-        instance, nodeinfo.software.name, nodeinfo.software.version
+        "instance: {}",
+        instance
     )
     .expect("Failed to save to file");
 }
