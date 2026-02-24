@@ -11,23 +11,18 @@ use std::fs::File;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
+use dashmap::DashSet;
 use dotenv::dotenv;
 use sqlx::PgPool;
 use tokio::sync::mpsc;
+use tokio::time::timeout;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
 #[tokio::main]
 async fn main() {
     let now = SystemTime::now();
 
-    let mut found_urls: HashSet<String> = HashSet::new();
-
-    let path = Path::new("data.txt");
-    let display = path.display();
-    let mut file = match File::create(&path) {
-        Err(why) => panic!("couldn't create {}: {}", display, why),
-        Ok(file) => file,
-    };
+    let found_urls = Arc::new(DashSet::new());
 
     let http_client = reqwest::Client::builder()
         .timeout(Duration::from_secs(4))
@@ -51,13 +46,28 @@ async fn main() {
     let mut stream = UnboundedReceiverStream::new(rx)
         .map(|url: String| {
             let client = shared_client.clone();
-            async move { (url.clone(), fetch_instance(url, client).await) }
+            let visited_clone = found_urls.clone();
+            let tx_discovery = tx.clone();
+
+            async move {
+                let result = fetch_instance(url.clone(), client).await;
+
+                if let Ok(ref result_tuple) = result {
+                    for peer in &result_tuple.1 {
+                        if !peer.contains("troll") && visited_clone.insert(peer.clone()) {
+                            let _ = tx_discovery.send(peer.clone());
+                        }
+                    }
+                }
+
+                (url, result)
+            }
         })
         .buffer_unordered(20);
 
     let mut index = 0;
 
-    while let Some((url, result)) = stream.next().await {
+    while let Ok(Some((url, result))) = timeout(Duration::from_secs(30), stream.next()).await {
         if index >= 1000 {
             break;
         }
@@ -65,22 +75,12 @@ async fn main() {
         match result {
             Ok(result_tuple) => {
                 if let Some(node_info) = result_tuple.0 {
-                    let pool_clone = postgres_client.clone(); // Pools are meant to be cloned
+                    let pool_clone = postgres_client.clone();
                     db_set.spawn(async move {
                         save_data(url, node_info, &pool_clone).await;
                     });
                 }
 
-                for peer in result_tuple.1 {
-
-                    if peer.contains("activitypub-troll.cf") || peer.contains("troll.rip") {
-                        continue;
-                    }
-
-                    if found_urls.insert(peer.clone()) {
-                        let _ = tx.send(peer);
-                    }
-                }
                 index += 1;
                 println!("Processed: {}/200 | Queue hidden in channel", index);
             }
