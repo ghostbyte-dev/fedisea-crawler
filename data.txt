@@ -1,62 +1,194 @@
-instance: techhub.social
-instance: toot.coupou.fr
-instance: finotto.social
-instance: frankenwolke.com
-instance: mastodon.duncanhart.com
-instance: mitratest01.stefanomarinelli.it
-instance: mastodon.lertsenem.com
-instance: micro.shitpost.blog
-instance: mastodon.la
-instance: mastodon.samfira.com
-instance: social.meissa-gmbh.de
-instance: mastodon.b3lt3r.com
-instance: social.4142.io
-instance: lammy.club
-instance: peasej.me
-instance: harbour.cafe
-instance: crabsin.space
-instance: toot.murderhobos.party
-instance: goodfeeds.net
-instance: shouldagoneoffroad.com
-instance: luther.social
-instance: tootdorf.de
-instance: vickerson.me
-instance: alfajet.masto.host
-instance: mastodon.r-flash.eu
-instance: pixels.jonpark.co.uk
-instance: hagale.net
-instance: wolfhaus.me
-instance: mstdn.progressiv.dev
-instance: waldvogel.family
-instance: pixel.mmn.ca
-instance: jxmsocial.xyz
-instance: nuklear.family
-instance: social.vmbrasseur.com
-instance: masto.deluma.biz
-instance: rlidea.com
-instance: mastodon.geekery.org
-instance: social.fomin.site
-instance: cybre.ninja
-instance: 7td.org
-instance: maidcafe.cc
-instance: friendica.youthweb.net
-instance: eat.fruits.social
-instance: mastodon.naii.io
-instance: ruinous.social
-instance: omglol.fun
-instance: mastodon.nexusuk.org
-instance: noc.social
-instance: blooming-land.icu
-instance: feed.nxs3.com
-instance: synth.zip
-instance: social.unboiled.info
-instance: alliec.at
-instance: mastodon.overholts.dev
-instance: calckey.anzui.dev
-instance: mastodon.vda-group.de
-instance: abolish.social
-instance: toot.jeena.net
-instance: mastodon.nealgroothuis.name
-instance: mastodon.revsuine.xyz
-instance: syasai.club
-instance: momo.mame.moe
+instance: mastodon.social, mastodon: 4.6.0-nightly.2026-02-24
+instance: luzeed.org, pixelfed: 0.12.7
+instance: masto.svavar.com, mastodon: 4.5.5
+instance: mastodon.apievangelist.com, mastodon: 3.5.3
+instance: social.iheartmichelle.com, mastodon: 4.5.6
+instance: huskies.online, mastodon: 4.5.6
+instance: mastodon.maho-do.jp, mastodon: 4.4.5
+instance: youth.social, mastodon: 4.5.5
+instance: tsubuyaki.choro3.net, mastodon: 4.3.8
+instance: mast.madmolelabs.com, mastodon: 4.5.6
+instance: m.abyss.moe, mastodon: 4.3.2
+instance: toot.norbipeti.eu, mastodon: 4.5.3
+instance: social.arcanelab.net, mastodon: 4.5.4
+instance: attreno.fr, mastodon: 4.2.15
+instance: social.lex-blog.eu, mastodon: 4.5.6
+instance: mast.yurec.online, mastodon: 4.3.0
+instance: social.masawada.me, mastodon: 4.5.6
+instance: mastodon.binwang.me, mastodon: 4.2.10
+instance: kinktest.masto.host, mastodon: 4.5.6
+instance: rickyleong.me, mastodon: 4.5.6
+instance: simon.blog, wordpress: 6.9
+instance: misskey.canpavon.cat, misskey: 2025.12.2
+instance: member.ro, mastodon: 4.3.4
+instance: insta.landofkittens.social, pixelfed: 0.12.6
+instance: mastodon.fooddrinklife.com, mastodon: 4.5.6
+instance: social.dunamisnexus.net, mastodon: 4.5.6
+instance: bibliodiversidade.club, mastodon: 4.5.6
+instance: km.produkti.se, akkoma: 3.17.0
+instance: fed.vulpo.one, friendica: 2026.01-1586
+instance: foxi.sh, mastodon: 4.1.18
+instance: oideion.ca, mastodon: 4.4.3
+instance: hamradio.tel, mastodon: 4.5.2
+instance: brontosin.space, mastodon: 4.2.17
+instance: firebringer.social, mastodon: 4.3.6
+instance: hata.casa, pleroma: 2.5.1
+instance: social.chatty.monster, mastodon: 4.6.0-alpha.4+glitch
+instance: mastodon.tod.net, mastodon: 4.5.6
+instance: pleroma.zuikou.dev, pleroma: 2.9.1
+instance: darkpenguin.social, mastodon: 4.5.6
+instance: mastodon.mauve.moe, mastodon: 3.5.10
+instance: tootmavie.net, mastodon: 4.5.5
+instance: masost.one, misskey: 2025.12.2
+instance: social.devnamic.com, mastodon: 4.3.1+glitch
+instance: social.madeoutofmeat.com, pleroma: 2.4.4
+instance: demigod.bar, mastodon: 4.5.6
+instance: sneakerwave.net, mastodon: 4.5.6
+instance: social.screamingatmyscreen.com, mastodon: 4.5.6
+instance: mastodon.triformine.dev, mastodon: 4.2.7
+instance: faeranne.me, sharkey: 2025.4.2
+instance: blueviolet.monster, mastodon: 4.5.6
+instance: mastodon.eddmil.es, mastodon: 4.5.6
+instance: social.pu2ttz.app.br, mastodon: 4.5.6
+instance: social.rma.ac.be, mastodon: 4.3.9
+instance: entangledstates.org, wordpress: 6.9
+instance: mstdn.social.setsuzokustudio.com, mastodon: 4.3.6
+instance: mastodon.tuidao.me, mastodon: 4.5.6
+instance: kys.moe, pleroma: 2.10.0
+instance: timeline.wtf, mastodon: 4.3.8
+instance: empire.miyaco.moe, misskey: 2025.12.2-miyaco.21
+instance: katzebot.space, mastodon: 4.2.13
+instance: elmoncho.cc, mastodon: 4.5.5+glitch
+instance: alliec.at, mastodon: 4.5.4
+instance: boumi.me, mastodon: 4.5.6
+instance: mastodon.balamb.fr, mastodon: 4.6.0-nightly.2026-02-22+chuckya
+instance: 400nm.kvarkki.nexus, pixelfed: 0.12.6
+instance: social.dsmouse.net, mastodon: 4.4.0-beta.2+glitch.0618_f4c850d
+instance: darkshade.social, mastodon: 4.5.6
+instance: typing.ink, mastodon: 4.5.2
+instance: social.as59715.net, pleroma: 2.5.54-2720-g9bec0223.develop+soapbox
+instance: mostlygood.xyz, mastodon: 4.5.5+glitch
+instance: mi2.suzusiro.com, misskey: 2025.12.1
+instance: foxes.day, sharkey: 2025.4.4-moca
+instance: v2br.social, mastodon: 4.5.6
+instance: fo0bar.org, mastodon: 4.5.6
+instance: educacao-inclusiva.wiki, wordpress: 6.9
+instance: e4le.me, misskey: 2025.9.0
+instance: mastodon.boyfails.me, mastodon: 4.1.2
+instance: tylernguyen.social, mastodon: 4.5.6
+instance: poorlyrendered.com, mastodon: 4.5.6
+instance: fri.dxz.ch, friendica: 2026.04-dev-1589
+instance: pantsfree.cc, pleroma: 2.9.1
+instance: chirpi.de, mastodon: 4.5.6
+instance: physchem.science, mastodon: 4.5.6
+instance: nfld.me, mastodon: 4.5.5
+instance: mastodon.classicyou.nl, mastodon: 4.5.5
+instance: mastodon.nikolaev-sh.ru, mastodon: 4.5.4
+instance: toot.ale.gd, mastodon: 4.5.0-alpha.2+glitch
+instance: doughnuton.com, kmyblue: 4.5.1+kmyblue.21.2-lts
+instance: social.anemoneprune.fr, friendica: 2026.01-1586
+instance: friendica.a-zwenkau.de, friendica: 2025.07-rc-1586
+instance: 2248.live, misskey: 2025.7.0
+instance: muenzl.net, wordpress: 6.9
+instance: soc.nemo.click, snac: 2.90-dev
+instance: do.crimes.brie.gay, sharkey: 2025.4.4
+instance: opennieuwsbank.nl, wordpress: 6.9
+instance: alex.femto.pub, takahe: 0.12.0
+instance: pouet.pas.la, mastodon: 4.3.5
+instance: bookwyrm.beine.family, bookwyrm: 0.8.3
+instance: spooner.social, mastodon: 4.5.3
+instance: quitter.pl, pleroma: 2.7.0
+instance: nicht-so.social, mastodon: 4.5.6
+instance: mastodon.woodburn.au, mastodon: 4.3.4
+instance: mastodon.parleur.net, mastodon: 4.5.6
+instance: gn2.social, mastodon: 4.5.6
+instance: social.anafabula.de, sharkey: 2025.4.5
+instance: moodoo.org, mastodon: 4.5.6
+instance: antisocial.science, mastodon: 4.3.17
+instance: mastodon2.cameko.org, mastodon: 4.5.2
+instance: technically.social, mastodon: 4.5.6
+instance: fedii.xn--n3haa.ws, mastodon: 4.5.2
+instance: mstdn.mimikun.jp, mastodon: 4.5.5
+instance: social.hnws.me, mastodon: 4.5.5
+instance: book.dadalo.pl, bookwyrm: 0.8.2
+instance: social.budini.me, mastodon: 4.5.3
+instance: raki.club, akkoma: 3.17.0-0-g06589d9--stable-
+instance: mastodon.ethibox.fr, mastodon: 4.5.2
+instance: mast.fedicity.net, mastodon: 4.5.6
+instance: interrobang.pizza, mastodon: 4.3.0
+instance: summary.ink, misskey: 2025.12.1
+instance: social.mattloomis.com, friendica: 2024.12-1576
+instance: patches.social, mastodon: 4.3.2
+instance: weatherishappening.network, mastodon: 4.1.4
+instance: buc.ci, snac: 2.86
+instance: elefant.social, mastodon: 4.5.6
+instance: lexpostma.me, wordpress: 6.9
+instance: pix.schiessle.eu, pixelfed: 0.12.5
+instance: klunscher.social, mastodon: 4.5.6
+instance: soc.quornichon.org, snac: 2.83
+instance: shellbytes.me, mastodon: 4.4.3
+instance: justjake.masto.host, mastodon: 4.5.6
+instance: fedifeed.net, mastodon: 4.5.6
+instance: social.lightlyseared.online, mastodon: 4.5.6
+instance: awoo.chat, mastodon: 4.3.7
+instance: pixelfed.midworld.de, pixelfed: 0.12.6
+instance: msky.ntr.homes, misskey: 2025.6.3
+instance: bullcity.space, mastodon: 4.4.3
+instance: toot.legacycode.rocks, mastodon: 4.5.6
+instance: toots.inbutts.lol, mastodon: 4.5.3
+instance: fv.sitwell.dev, sharkey: 2025.4.4
+instance: furnu.org, mastodon: 4.5.5
+instance: misskey.bootjp.me, misskey: 2025.12.2
+instance: networked-media.itp.io, mastodon: 4.3.14
+instance: social.the-mansfields.co.uk, mastodon: 4.5.6
+instance: pm.ernix.jp, mastodon: 4.5.2
+instance: bunny.social, mastodon: 4.5.6
+instance: esolis.social, mastodon: 4.3.7
+instance: pixelfed.desmu.fr, pixelfed: 0.12.7
+instance: mastodon.zip, mastodon: 4.5.3
+instance: glitch.lgbt, mastodon: 4.5.3
+instance: nocturne.reverie-world.net, misskey: 1.3.2-beta.4
+instance: social.jumaru.net, mastodon: 4.5.6
+instance: goark.fedicity.net, mastodon: 4.5.6
+instance: social.firehawk-systems.com, pleroma: 2.4.1
+instance: selbsthilfe.social, mastodon: 4.5.6
+instance: masto.binaryworks.ca, mastodon: 4.4.1
+instance: seacow.social, mastodon: 3.3.0
+instance: spoonie.community, mastodon: 4.1.13
+instance: prismst.one, firefish: 1.0.3
+instance: mastodon.veen.world, mastodon: 4.5.3
+instance: lifeof.ahabitual.dev, pixelfed: 0.12.7
+instance: social.gamingecke.space, mastodon: 4.4.1
+instance: embassy.social, mastodon: 4.5.6
+instance: routingmagic.club, mastodon: 4.0.2
+instance: f.iroiro.party, friendica: 2026.01-1586
+instance: 10211104.fedicity.net, mastodon: 4.5.6
+instance: dtg.social, mastodon: 4.5.6
+instance: lightcrystal.fedicity.net, mastodon: 4.5.6
+instance: wordnik.social, mastodon: 4.5.6
+instance: tooting.ninja, mastodon: 4.5.6
+instance: under-bank.blue, mastodon: 4.5.2
+instance: masto.monero.space, mastodon: 4.5.6
+instance: rocketsnail.masto.host, mastodon: 4.5.6
+instance: saigyouji.cyou, mastodon: 4.5.6
+instance: jiskey.dev, misskey: 2025.12.2
+instance: ei.heloise.im, mastodon: 4.5.6
+instance: cruisers.social, mastodon: 4.5.6
+instance: calckey.lapineige.fr, calckey: 13.1.4.1
+instance: social.sopuzzled.com, mastodon: 4.5.6
+instance: misskey.mina.to, meisskey: 10.102.703-m544
+instance: toot.boston, hometown: 4.2.17+hometown-1.1.2
+instance: mastodon.hochschule-trier.de, mastodon: 4.2.29
+instance: vim.town, mastodon: 4.5.6
+instance: pleroma.popolon.org, snac: 2.90
+instance: pixelfed.albertmin.com, pixelfed: 0.12.7
+instance: mastodon.gsugambit.com, mastodon: 3.5.3
+instance: mastodon.fo, mastodon: 4.5.6
+instance: pictures.veen.world, pixelfed: 0.12.6
+instance: stg.mstdn.plusminus.io, paon: 6.0.2
+instance: toot.ebu.io, mastodon: 4.5.3
+instance: g0o.net, mastodon: 4.5.6
+instance: cbr.social, mastodon: 4.5.6
+instance: socialserver.science, mastodon: 4.5.6
+instance: mastodon.qamoe.cyou, mastodon: 4.2.7
+instance: sunshinecoast.social, mastodon: 4.5.6
