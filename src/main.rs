@@ -42,7 +42,7 @@ async fn main() {
 
     let (tx, rx) = mpsc::unbounded_channel::<String>();
 
-    let seed = "mastodon.social";
+    let seed = "pixelfed.social";
     tx.send(seed.to_string()).expect("send failed");
     found_urls.insert(seed.to_string());
 
@@ -90,8 +90,9 @@ async fn main() {
         }
     }
 
+    println!("finish db updates");
     while let Some(_) = db_set.join_next().await {}
-
+    println!("finished db updates");
     match now.elapsed() {
         Ok(elapsed) => {
             println!("{} sec", elapsed.as_secs());
