@@ -6,10 +6,12 @@ use crate::client::fetch_instance;
 use crate::storage::save_data;
 use futures::StreamExt;
 use std::collections::HashSet;
+use std::env;
 use std::fs::File;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
+use dotenv::dotenv;
 use sqlx::PgPool;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -34,9 +36,9 @@ async fn main() {
         .expect("reqwest client failed");
 
     let shared_client = Arc::new(http_client);
-
-    let database_url = "postgres://fedisea:Aut-1251@localhost:5432/fedisea";
-    let postgres_client = PgPool::connect(database_url).await.expect("connect to db failed");
+    dotenv().ok();
+    let database_url = env::var("DB_CONNECTION_STRING").expect("DB_CONNECTION_STRING must be set");
+    let postgres_client = PgPool::connect(&database_url).await.expect("connect to db failed");
 
     let (tx, rx) = mpsc::unbounded_channel::<String>();
 
