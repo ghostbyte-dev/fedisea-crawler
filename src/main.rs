@@ -72,6 +72,11 @@ async fn main() {
                 }
 
                 for peer in result_tuple.1 {
+
+                    if peer.contains("activitypub-troll.cf") || peer.contains("troll.rip") {
+                        continue;
+                    }
+
                     if found_urls.insert(peer.clone()) {
                         let _ = tx.send(peer);
                     }
