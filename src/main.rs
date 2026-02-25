@@ -68,26 +68,37 @@ async fn main() {
 
     let mut index = 0;
 
-    while let Ok(Some((url, result))) = timeout(Duration::from_secs(30), stream.next()).await {
+    while let Ok(Some((url, result))) = timeout(Duration::from_secs(15), stream.next()).await {
         if index >= 1000 {
             break;
         }
 
         match result {
             Ok(result_tuple) => {
+                // Only spawn the database task if we actually got NodeInfo
                 if let Some(node_info) = result_tuple.0 {
                     let pool_clone = postgres_client.clone();
+                    let url_for_db = url.clone(); // Clone for the async move
+
                     db_set.spawn(async move {
-                        save_data(url, node_info, &pool_clone).await;
+                        save_data(url_for_db, node_info, &pool_clone).await;
                     });
+
+                    // Use a green checkmark for successful saves!
+                    println!("Y [{}/1000] Saved: {}", index + 1, url);
+                } else {
+                    // Instance was up, but no NodeInfo (common for non-ActivityPub sites)
+                    println!("N️ [{}/1000] No NodeInfo: {}", index + 1, url);
                 }
             }
-            Err(e) => {
-                //eprintln!("Error fetching {}: {}", url, e);
+            Err(_) => {
+                // Instance was dead/timeout.
+                // We increment index anyway to keep moving through the 1000-limit
+                println!("❌ [{}/1000] Dead: {}", index + 1, url);
             }
         }
+
         index += 1;
-        println!("Processed: {}/1000 | Queue hidden in channel", index);
     }
 
     println!("finish db updates");
