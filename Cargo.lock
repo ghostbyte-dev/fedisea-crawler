@@ -376,6 +376,7 @@ dependencies = [
  "futures",
  "reqwest",
  "serde",
+ "serde_json",
  "sqlx",
  "tokio",
  "tokio-stream",

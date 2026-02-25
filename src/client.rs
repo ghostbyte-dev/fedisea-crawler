@@ -26,13 +26,34 @@ pub async fn fetch_well_known(
     let url = format!("https://{}/.well-known/nodeinfo", instance,);
     let url = Url::parse(&*url)?;
 
-    let res: WellKnown = http_client
-        .get(url)
+    let response = http_client
+        .get(url.clone())
         .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
+        .await
+        .map_err(|e| anyhow::anyhow!("Request Failed [{}] - Error: {}", url, e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        return Err(anyhow::anyhow!(
+            "HTTP Status Error [{}] - Status: {}",
+            url,
+            status
+        ));
+    }
+    let body_text = response
+        .text()
+        .await
+        .map_err(|e| anyhow::anyhow!("Body Read Error [{}] - Error: {}", url, e))?;
+
+    let res: WellKnown = serde_json::from_str(&body_text).map_err(|e| {
+        anyhow::anyhow!(
+            "JSON Deserialization Error [{}] - Error: {}\nRaw Body (first 100 chars): {}",
+            url,
+            e,
+            body_text.chars().take(100).collect::<String>()
+        )
+    })?;
+
     Ok(res)
 }
 

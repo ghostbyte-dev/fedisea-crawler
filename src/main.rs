@@ -25,6 +25,7 @@ async fn main() {
         .timeout(Duration::from_secs(10))
         .connect_timeout(Duration::from_secs(1))
         .user_agent("FediseaCrawler/1.0")
+        .pool_max_idle_per_host(0)
         .build()
         .expect("reqwest client failed");
 
@@ -37,7 +38,7 @@ async fn main() {
 
     let discover_tx = tx.clone();
     drop(tx);
-    let seed = "pixelfed.social";
+    let seed = "starbase80.wtf";
     discover_tx.send(seed.to_string()).await.expect("send failed");
     found_urls.insert(seed.to_string());
 
