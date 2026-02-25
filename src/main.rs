@@ -22,8 +22,9 @@ async fn main() {
     let found_urls = Arc::new(DashSet::new());
 
     let http_client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(3))
+        .timeout(Duration::from_secs(10))
         .connect_timeout(Duration::from_secs(1))
+        .user_agent("FediseaCrawler/1.0")
         .build()
         .expect("reqwest client failed");
 
@@ -36,7 +37,7 @@ async fn main() {
 
     let discover_tx = tx.clone();
     drop(tx);
-    let seed = "pixelix.social";
+    let seed = "social.drastical.tech";
     discover_tx.send(seed.to_string()).await.expect("send failed");
     found_urls.insert(seed.to_string());
 
@@ -51,7 +52,7 @@ async fn main() {
             async move {
                 let fetch_future = fetch_instance(url.clone(), client);
 
-                match tokio::time::timeout(Duration::from_secs(3), fetch_future).await {
+                match tokio::time::timeout(Duration::from_secs(5), fetch_future).await {
                     Ok(Ok(result_tuple)) => {
                         let peers = result_tuple.1.clone();
                         tokio::spawn(async move {
@@ -88,14 +89,17 @@ async fn main() {
                     if url.trim() == "pixelix.social" {
                         println!("PIXELIX.social")
                     }
+                    println!("success");
                     index += 1;
                     if index % 10 == 0 {
                         println!("🚀 Success: {} | Queue: {} | Last: {}", index, total_attempts, url);
                     }
-                } else {}
+                } else {
+                    println!("Invalid Nodeinfo {}", url)
+                }
             }
             Err(e) => {
-                println!("{}", e)
+               println!("{}", e)
             }
         }
         if total_attempts % 100 == 0 {

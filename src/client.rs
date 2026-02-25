@@ -13,7 +13,7 @@ pub async fn fetch_instance(
     } else {
         None
     };
-    
+    println!("{}", nodeinfo.is_some());
     let peers = fetch_peers(instance, http_client).await.ok();
     let peers = peers.unwrap_or_else(|| vec![]);
     Ok((nodeinfo, peers))
@@ -58,7 +58,7 @@ pub async fn fetch_nodeinfo(
     http_client: Arc<Client>,
 ) -> Result<Nodeinfo, anyhow::Error> {
     let url = Url::parse(url)?;
-
+    println!("url: {}", url);
     let res: Nodeinfo = http_client
         .get(url)
         .send()
