@@ -42,7 +42,7 @@ async fn main() {
 
     let discover_tx = tx.clone();
     drop(tx);
-    let seed = "kafka.icu";
+    let seed = "mastodon.iftas.org";
     discover_tx
         .send(seed.to_string())
         .await
@@ -78,7 +78,7 @@ async fn main() {
                 }
             }
         })
-        .buffer_unordered(100);
+        .buffer_unordered(50);
 
     let mut index = 0;
     let mut total_attempts = 0;
