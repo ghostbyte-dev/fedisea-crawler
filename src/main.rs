@@ -16,7 +16,7 @@ use dotenv::dotenv;
 use sqlx::PgPool;
 use tokio::sync::mpsc;
 use tokio::time::timeout;
-use tokio_stream::wrappers::UnboundedReceiverStream;
+use tokio_stream::wrappers::{ReceiverStream, UnboundedReceiverStream};
 
 #[tokio::main]
 async fn main() {
@@ -35,16 +35,17 @@ async fn main() {
     let database_url = env::var("DB_CONNECTION_STRING").expect("DB_CONNECTION_STRING must be set");
     let postgres_client = PgPool::connect(&database_url).await.expect("connect to db failed");
 
-    let (tx, rx) = mpsc::unbounded_channel::<String>();
+    let (tx, rx) = mpsc::channel::<String>(5000);
+
     let discover_tx = tx.clone();
     drop(tx);
     let seed = "pixelfed.social";
-    discover_tx.send(seed.to_string()).expect("send failed");
+    discover_tx.send(seed.to_string()).await.expect("send failed");
     found_urls.insert(seed.to_string());
 
     let mut db_set = tokio::task::JoinSet::new();
 
-    let mut stream = UnboundedReceiverStream::new(rx)
+    let mut stream = ReceiverStream::new(rx)
         .map(|url: String| {
             let client = shared_client.clone();
             let visited_clone = found_urls.clone();
