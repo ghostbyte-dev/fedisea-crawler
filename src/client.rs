@@ -14,7 +14,8 @@ pub async fn fetch_instance(
         None
     };
     
-    let peers = fetch_peers(instance, http_client).await?;
+    let peers = fetch_peers(instance, http_client).await.ok();
+    let peers = peers.unwrap_or_else(|| vec![]);
     Ok((nodeinfo, peers))
 }
 
