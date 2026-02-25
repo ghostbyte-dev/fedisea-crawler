@@ -22,8 +22,8 @@ async fn main() {
     let found_urls = Arc::new(DashSet::new());
 
     let http_client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(4))
-        .connect_timeout(Duration::from_secs(2))
+        .timeout(Duration::from_secs(3))
+        .connect_timeout(Duration::from_secs(1))
         .build()
         .expect("reqwest client failed");
 
@@ -32,7 +32,7 @@ async fn main() {
     let database_url = env::var("DB_CONNECTION_STRING").expect("DB_CONNECTION_STRING must be set");
     let postgres_client = PgPool::connect(&database_url).await.expect("connect to db failed");
 
-    let (tx, rx) = mpsc::channel::<String>(5000);
+    let (tx, rx) = mpsc::channel::<String>(10000);
 
     let discover_tx = tx.clone();
     drop(tx);
@@ -51,15 +51,12 @@ async fn main() {
             async move {
                 let fetch_future = fetch_instance(url.clone(), client);
 
-                match tokio::time::timeout(Duration::from_secs(5), fetch_future).await {
+                match tokio::time::timeout(Duration::from_secs(3), fetch_future).await {
                     Ok(Ok(result_tuple)) => {
-                        // SPAWN discovery so it doesn't block the stream progress
                         let peers = result_tuple.1.clone();
                         tokio::spawn(async move {
                             for peer in peers {
                                 if !peer.contains("troll") && visited_clone.insert(peer.clone()) {
-                                    // MUST .await here, but since we are in tokio::spawn,
-                                    // it won't block the main stream!
                                     let _ = tx_discovery.send(peer).await;
                                 }
                             }
@@ -72,7 +69,7 @@ async fn main() {
                 }
             }
         })
-        .buffer_unordered(100);
+        .buffer_unordered(200);
 
     let mut index = 0;
     let mut total_attempts = 0;
