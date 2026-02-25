@@ -32,7 +32,7 @@ async fn main() {
     let database_url = env::var("DB_CONNECTION_STRING").expect("DB_CONNECTION_STRING must be set");
     let postgres_client = PgPool::connect(&database_url).await.expect("connect to db failed");
 
-    let (tx, rx) = mpsc::channel::<String>(10000);
+    let (tx, rx) = mpsc::channel::<String>(5000);
 
     let discover_tx = tx.clone();
     drop(tx);
