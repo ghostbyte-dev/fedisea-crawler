@@ -5,10 +5,7 @@ mod storage;
 use crate::client::fetch_instance;
 use crate::storage::save_data;
 use futures::StreamExt;
-use std::collections::HashSet;
 use std::env;
-use std::fs::File;
-use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use dashmap::DashSet;
@@ -16,7 +13,7 @@ use dotenv::dotenv;
 use sqlx::PgPool;
 use tokio::sync::mpsc;
 use tokio::time::timeout;
-use tokio_stream::wrappers::{ReceiverStream, UnboundedReceiverStream};
+use tokio_stream::wrappers::{ReceiverStream};
 
 #[tokio::main]
 async fn main() {
@@ -49,20 +46,25 @@ async fn main() {
         .map(|url: String| {
             let client = shared_client.clone();
             let visited_clone = found_urls.clone();
-            let tx_discovery = discover_tx.clone();
+            let tx_discovery = discover_tx.clone(); // Clone sender for the task
 
             async move {
-                // Use a 5-second "total task timeout" so one hanging DNS query
-                // can't block a buffer slot forever.
                 let fetch_future = fetch_instance(url.clone(), client);
 
                 match tokio::time::timeout(Duration::from_secs(5), fetch_future).await {
                     Ok(Ok(result_tuple)) => {
-                        for peer in &result_tuple.1 {
-                            if !peer.contains("troll") && visited_clone.insert(peer.clone()) {
-                                let _ = tx_discovery.send(peer.clone());
+                        // SPAWN discovery so it doesn't block the stream progress
+                        let peers = result_tuple.1.clone();
+                        tokio::spawn(async move {
+                            for peer in peers {
+                                if !peer.contains("troll") && visited_clone.insert(peer.clone()) {
+                                    // MUST .await here, but since we are in tokio::spawn,
+                                    // it won't block the main stream!
+                                    let _ = tx_discovery.send(peer).await;
+                                }
                             }
-                        }
+                        });
+
                         (url, Ok(result_tuple))
                     }
                     Ok(Err(e)) => (url, Err(e)),
@@ -70,7 +72,7 @@ async fn main() {
                 }
             }
         })
-        .buffer_unordered(20);
+        .buffer_unordered(100);
 
     let mut index = 0;
     let mut total_attempts = 0;
