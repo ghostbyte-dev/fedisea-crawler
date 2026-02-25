@@ -89,7 +89,7 @@ async fn main() {
                     if url.trim() == "pixelix.social" {
                         println!("PIXELIX.social")
                     }
-                    println!("success");
+                    //println!("success");
                     index += 1;
                     if index % 10 == 0 {
                         println!("🚀 Success: {} | Queue: {} | Last: {}", index, total_attempts, url);
@@ -99,7 +99,7 @@ async fn main() {
                 }
             }
             Err(e) => {
-               println!("{}", e)
+               //println!("{}", e)
             }
         }
         if total_attempts % 100 == 0 {
