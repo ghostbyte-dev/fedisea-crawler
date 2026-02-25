@@ -67,15 +67,12 @@ async fn main() {
         .buffer_unordered(20);
 
     let mut index = 0;
-
+    let mut total_attempts = 0;
     while let Ok(Some((url, result))) = timeout(Duration::from_secs(15), stream.next()).await {
-        if index >= 1000 {
-            break;
-        }
+        total_attempts += 1;
 
         match result {
             Ok(result_tuple) => {
-                // Only spawn the database task if we actually got NodeInfo
                 if let Some(node_info) = result_tuple.0 {
                     let pool_clone = postgres_client.clone();
                     let url_for_db = url.clone(); // Clone for the async move
@@ -84,21 +81,18 @@ async fn main() {
                         save_data(url_for_db, node_info, &pool_clone).await;
                     });
 
-                    // Use a green checkmark for successful saves!
-                    println!("Y [{}/1000] Saved: {}", index + 1, url);
-                } else {
-                    // Instance was up, but no NodeInfo (common for non-ActivityPub sites)
-                    println!("N️ [{}/1000] No NodeInfo: {}", index + 1, url);
-                }
+                    index += 1;
+                    if index % 10 == 0 {
+                        println!("🚀 Success: {} | Queue: {} | Last: {}", index, total_attempts, url);
+                    }
+                } else {}
             }
             Err(_) => {
-                // Instance was dead/timeout.
-                // We increment index anyway to keep moving through the 1000-limit
-                println!("❌ [{}/1000] Dead: {}", index + 1, url);
             }
         }
-
-        index += 1;
+        if total_attempts % 100 == 0 {
+            println!("📡 Progress: {} domains checked...", total_attempts);
+        }
     }
 
     println!("finish db updates");
