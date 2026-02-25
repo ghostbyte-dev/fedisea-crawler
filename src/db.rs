@@ -19,7 +19,7 @@ impl RedisRepository {
         Ok(added == 1)
     }
 
-    pub async fn enqueue_job(&self, domain: &str, run_at: u64) -> Result<(), anyhow::Error> {
+    pub async fn enqueue_job(&self, domain: &str, run_at: i64) -> Result<(), anyhow::Error> {
         let mut conn = self.manager.clone();
 
         let _: i32 = conn.zadd("crawler:queue", domain, run_at).await?;
@@ -52,5 +52,20 @@ impl RedisRepository {
         }
 
         Ok(None)
+    }
+
+    pub async fn get_failure_count(&self, domain: &str) -> i32 {
+        let mut conn = self.manager.clone();
+        conn.hget(format!("stats:{}", domain), "fail_count").await.unwrap_or(0)
+    }
+
+    pub async fn increment_failure(&self, domain: &str) -> i32 {
+        let mut conn = self.manager.clone();
+        conn.hincr(format!("stats:{}", domain), "fail_count", 1).await.unwrap_or(1)
+    }
+
+    pub async fn reset_failure(&self, domain: &str) {
+        let mut conn = self.manager.clone();
+        let _: () = conn.hset(format!("stats:{}", domain), "fail_count", 0).await.unwrap_or(());
     }
 }

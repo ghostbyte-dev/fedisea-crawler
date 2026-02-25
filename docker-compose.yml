@@ -9,26 +9,47 @@ services:
     volumes:
       - redis-data:/data
     networks:
-      - redis-network
-  #redis-insight
-  redis-insight:
-    image: redis/redisinsight:latest
-    container_name: redis-insight
-    restart: unless-stopped
-    ports:
-      - "5540:5540"
-    volumes:
-      - redis-insight-data:/data
-    networks:
-      - redis-network
+      - crawler-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+  crawler:
+    build: . # Looks for a Dockerfile in your current directory
+    container_name: rust-crawler
+    restart: always
+    environment:
+      - REDIS_URL=${REDIS_URL}
+      - DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - crawler-network
+  db:
+    image: postgres:15-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crawler-network
 
 volumes:
   redis-data:
     driver: local
-  redis-insight-data:
-    driver: local
+
 networks:
-  redis-network:
+  crawler-network:
     driver: bridge

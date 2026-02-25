@@ -10,3 +10,4 @@ reqwest = { version = "0.11", features = ["json"] }
 anyhow = "1.0"
 serde = { version = "1.0.228", features = ["derive"] }
 sqlx = { version = "0.8.6", features = [ "postgres", "runtime-tokio", "tls-rustls" ] }
+dotenvy = "0.15"

@@ -41,3 +41,23 @@ pub struct UsersUsage {
     pub active_halfyear: Option<i32>,
     pub active_month: Option<i32>
 }
+
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "instance_status", rename_all = "lowercase")]
+pub enum InstanceStatus {
+    ACTIVE,
+    DEAD,
+    DOWN,
+    ERROR,
+}
+
+impl InstanceStatus {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::ACTIVE => "ACTIVE",
+            Self::DEAD => "DEAD",
+            Self::DOWN => "DOWN",
+            Self::ERROR => "ERROR",
+        }
+    }
+}
