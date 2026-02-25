@@ -36,9 +36,10 @@ async fn main() {
     let postgres_client = PgPool::connect(&database_url).await.expect("connect to db failed");
 
     let (tx, rx) = mpsc::unbounded_channel::<String>();
-
+    let discover_tx = tx.clone();
+    drop(tx);
     let seed = "pixelfed.social";
-    tx.send(seed.to_string()).expect("send failed");
+    discover_tx.send(seed.to_string()).expect("send failed");
     found_urls.insert(seed.to_string());
 
     let mut db_set = tokio::task::JoinSet::new();
@@ -47,7 +48,7 @@ async fn main() {
         .map(|url: String| {
             let client = shared_client.clone();
             let visited_clone = found_urls.clone();
-            let tx_discovery = tx.clone();
+            let tx_discovery = discover_tx.clone();
 
             async move {
                 let result = fetch_instance(url.clone(), client).await;
@@ -80,14 +81,13 @@ async fn main() {
                         save_data(url, node_info, &pool_clone).await;
                     });
                 }
-
-                index += 1;
-                println!("Processed: {}/200 | Queue hidden in channel", index);
             }
             Err(e) => {
-                eprintln!("Error fetching {}: {}", url, e);
+                //eprintln!("Error fetching {}: {}", url, e);
             }
         }
+        index += 1;
+        println!("Processed: {}/1000 | Queue hidden in channel", index);
     }
 
     println!("finish db updates");

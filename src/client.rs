@@ -6,7 +6,6 @@ pub async fn fetch_instance(
     instance: String,
     http_client: Arc<Client>,
 ) -> Result<(Option<Nodeinfo>, Vec<String>), anyhow::Error> {
-    println!("Fetching instance: {}", instance);
     let well_known = fetch_well_known(instance.clone(), http_client.clone()).await?;
 
     let nodeinfo = if let Some(link) = well_known.links.first() {

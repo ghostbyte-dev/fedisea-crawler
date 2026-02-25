@@ -2,7 +2,6 @@ use crate::models::Nodeinfo;
 use sqlx::PgPool;
 
 pub async fn save_data(instance: String, nodeinfo: Nodeinfo, db_client: &PgPool) {
-    println!("Saving data");
     let query = "
     INSERT INTO instance (domain, software, software_version, open_registration, total_users, active_users_month, active_users_halfyear, local_posts, local_comments)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
