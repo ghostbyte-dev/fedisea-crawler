@@ -2,6 +2,7 @@ use std::env;
 use dotenvy::dotenv;
 use redis::aio::ConnectionManager;
 use crate::client::HttpClient;
+use crate::consts::WORKERS;
 use crate::db::RedisRepository;
 use crate::postgres_db::PostgresRepository;
 
@@ -10,6 +11,7 @@ mod worker;
 mod client;
 mod models;
 mod postgres_db;
+mod consts;
 
 #[tokio::main]
 async fn main() {
@@ -31,26 +33,27 @@ async fn main() {
 
     let http_client = HttpClient::new();
 
-    let now = std::time::SystemTime::now()
+  /* let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH).expect("Time went backwards").as_secs() + 10;
 
-   /* redis_repo.mark_as_seen("mastodon.social").await.expect("Failed to mark mastodon");
-    redis_repo.enqueue_job("mastodon.social", now as i64).await.expect("Failed to enqueue mastodon");
-
+   redis_repo.mark_as_seen("mastodon.social").await.expect("Failed to mark mastodon");
+    redis_repo.enqueue_job("mastodon.social", now as i64).await.expect("Failed to enqueue mastodon");*/
+/*
     redis_repo.mark_as_seen("pixelfed.social").await.expect("Failed to mark mastodon");
     redis_repo.enqueue_job("pixelfed.social", now as i64).await.expect("Failed to enqueue mastodon");
 */
-    let num_workers = 10;
-    for i in 0..num_workers {
+
+   for i in 0..WORKERS {
         let r_repo = redis_repo.clone();
         let p_repo = pg_repo.clone();
         let h_client = http_client.clone();
 
         tokio::spawn(async move {
-            println!("👷 Worker #{} is online", i);
+            println!("Worker #{} is online", i);
             worker::run_worker(r_repo, p_repo, h_client).await;
         });
     }
+    
     tokio::signal::ctrl_c().await.expect("failed to listen for event");
     println!("Shutting down...");
 }

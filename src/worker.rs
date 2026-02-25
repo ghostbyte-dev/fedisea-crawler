@@ -16,14 +16,14 @@ pub async fn run_worker(redis_repo: RedisRepository, postgres_repository: Postgr
                         redis_repo.reset_failure(&instance).await;
                         redis_repo.enqueue_job(&instance, now + delay).await.ok();
                     }
-                    Err(e) => {
+                    Err(_) => {
                         let fail_count = redis_repo.increment_failure(&instance).await;
 
                         let days = (2_i64.pow(fail_count.saturating_sub(1) as u32)).min(30);
                         let delay = days * 86400;
 
                         redis_repo.enqueue_job(&instance, now + delay).await.ok();
-                        if (fail_count <= 2) {
+                        if fail_count <= 2 {
                             postgres_repository.update_status(&instance, InstanceStatus::DOWN).await;
                         } else {
                             postgres_repository.update_status(&instance, InstanceStatus::DEAD).await;
@@ -47,6 +47,9 @@ async fn process_instance(
     pg_repo: &PostgresRepository,
     redis_repo: &RedisRepository,
 ) -> anyhow::Result<i64> {
+    if !http.are_roots_allowed(instance).await {
+        return Ok(604800);
+    }
     let well_known = http.fetch_well_known(instance.to_string()).await?;
     let nodeinfo_url = well_known.links.first()
         .ok_or_else(|| anyhow::anyhow!("No links found"))?

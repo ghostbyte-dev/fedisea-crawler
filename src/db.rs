@@ -53,12 +53,7 @@ impl RedisRepository {
 
         Ok(None)
     }
-
-    pub async fn get_failure_count(&self, domain: &str) -> i32 {
-        let mut conn = self.manager.clone();
-        conn.hget(format!("stats:{}", domain), "fail_count").await.unwrap_or(0)
-    }
-
+    
     pub async fn increment_failure(&self, domain: &str) -> i32 {
         let mut conn = self.manager.clone();
         conn.hincr(format!("stats:{}", domain), "fail_count", 1).await.unwrap_or(1)

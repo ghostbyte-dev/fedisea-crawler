@@ -7,8 +7,6 @@ pub struct WellKnown {
 
 #[derive(Deserialize)]
 pub struct WellKnownElement {
-    #[warn(dead_code)]
-    pub rel: String,
     pub href: String,
 }
 
