@@ -96,7 +96,7 @@ async fn main() {
             }
         }
         if total_attempts % 100 == 0 {
-            println!("📡 Progress: {} domains checked...", total_attempts);
+            println!("📡 Progress: {} domains checked..., url: {}", total_attempts, url);
         }
     }
 
