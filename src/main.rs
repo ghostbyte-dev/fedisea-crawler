@@ -71,7 +71,7 @@ async fn main() {
                 }
             }
         })
-        .buffer_unordered(200);
+        .buffer_unordered(100);
 
     let mut index = 0;
     let mut total_attempts = 0;
