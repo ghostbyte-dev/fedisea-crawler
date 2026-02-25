@@ -37,7 +37,7 @@ async fn main() {
 
     let discover_tx = tx.clone();
     drop(tx);
-    let seed = "social.drastical.tech";
+    let seed = "pixelfed.social";
     discover_tx.send(seed.to_string()).await.expect("send failed");
     found_urls.insert(seed.to_string());
 
