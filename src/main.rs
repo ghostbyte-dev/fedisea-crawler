@@ -36,7 +36,7 @@ async fn main() {
 
     let discover_tx = tx.clone();
     drop(tx);
-    let seed = "mastodon.social";
+    let seed = "pixelix.social";
     discover_tx.send(seed.to_string()).await.expect("send failed");
     found_urls.insert(seed.to_string());
 
@@ -85,14 +85,18 @@ async fn main() {
                     db_set.spawn(async move {
                         save_data(url_for_db, node_info, &pool_clone).await;
                     });
-
+                    if url.trim() == "pixelix.social" {
+                        println!("PIXELIX.social")
+                    }
                     index += 1;
                     if index % 10 == 0 {
                         println!("🚀 Success: {} | Queue: {} | Last: {}", index, total_attempts, url);
                     }
                 } else {}
             }
-            Err(_) => {}
+            Err(e) => {
+                println!("{}", e)
+            }
         }
         if total_attempts % 100 == 0 {
             println!("📡 Progress: {} domains checked..., url: {}", total_attempts, url);
