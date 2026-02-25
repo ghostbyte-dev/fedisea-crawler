@@ -22,7 +22,7 @@ async fn main() {
     let found_urls = Arc::new(DashSet::new());
 
     let http_client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(4))
         .connect_timeout(Duration::from_secs(1))
         .user_agent("FediseaCrawler/1.0")
         .pool_max_idle_per_host(1)
@@ -34,7 +34,10 @@ async fn main() {
     let shared_client = Arc::new(http_client);
     dotenv().ok();
     let database_url = env::var("DB_CONNECTION_STRING").expect("DB_CONNECTION_STRING must be set");
-    let postgres_client = PgPool::connect(&database_url)
+    let postgres_client = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(50) // Match your buffer_unordered count
+        .acquire_timeout(Duration::from_secs(30))
+        .connect(&database_url)
         .await
         .expect("connect to db failed");
 
@@ -42,7 +45,7 @@ async fn main() {
 
     let discover_tx = tx.clone();
     drop(tx);
-    let seed = "mastodon.iftas.org";
+    let seed = "pixelfed.social";
     discover_tx
         .send(seed.to_string())
         .await
@@ -60,7 +63,7 @@ async fn main() {
             async move {
                 let fetch_future = fetch_instance(url.clone(), client);
 
-                match tokio::time::timeout(Duration::from_secs(5), fetch_future).await {
+                match tokio::time::timeout(Duration::from_secs(2), fetch_future).await {
                     Ok(Ok(result_tuple)) => {
                         let peers = result_tuple.1.clone();
                         tokio::spawn(async move {
