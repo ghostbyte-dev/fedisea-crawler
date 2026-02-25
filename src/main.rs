@@ -4,16 +4,16 @@ mod storage;
 
 use crate::client::fetch_instance;
 use crate::storage::save_data;
+use dashmap::DashSet;
+use dotenv::dotenv;
 use futures::StreamExt;
+use sqlx::PgPool;
 use std::env;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
-use dashmap::DashSet;
-use dotenv::dotenv;
-use sqlx::PgPool;
 use tokio::sync::mpsc;
 use tokio::time::timeout;
-use tokio_stream::wrappers::{ReceiverStream};
+use tokio_stream::wrappers::ReceiverStream;
 
 #[tokio::main]
 async fn main() {
@@ -25,21 +25,28 @@ async fn main() {
         .timeout(Duration::from_secs(10))
         .connect_timeout(Duration::from_secs(1))
         .user_agent("FediseaCrawler/1.0")
-        .pool_max_idle_per_host(0)
+        .pool_max_idle_per_host(1)
+        .hickory_dns(true)
+        .pool_idle_timeout(Duration::from_secs(1))
         .build()
         .expect("reqwest client failed");
 
     let shared_client = Arc::new(http_client);
     dotenv().ok();
     let database_url = env::var("DB_CONNECTION_STRING").expect("DB_CONNECTION_STRING must be set");
-    let postgres_client = PgPool::connect(&database_url).await.expect("connect to db failed");
+    let postgres_client = PgPool::connect(&database_url)
+        .await
+        .expect("connect to db failed");
 
     let (tx, rx) = mpsc::channel::<String>(5000);
 
     let discover_tx = tx.clone();
     drop(tx);
-    let seed = "starbase80.wtf";
-    discover_tx.send(seed.to_string()).await.expect("send failed");
+    let seed = "kafka.icu";
+    discover_tx
+        .send(seed.to_string())
+        .await
+        .expect("send failed");
     found_urls.insert(seed.to_string());
 
     let mut db_set = tokio::task::JoinSet::new();
@@ -67,7 +74,7 @@ async fn main() {
                         (url, Ok(result_tuple))
                     }
                     Ok(Err(e)) => (url, Err(e)),
-                    Err(_) => (url, Err(anyhow::anyhow!("Task timed out")))
+                    Err(_) => (url, Err(anyhow::anyhow!("Task timed out"))),
                 }
             }
         })
@@ -90,21 +97,27 @@ async fn main() {
                     if url.trim() == "pixelix.social" {
                         println!("PIXELIX.social")
                     }
-                    //println!("success");
+                    println!("success");
                     index += 1;
                     if index % 10 == 0 {
-                        println!("🚀 Success: {} | Queue: {} | Last: {}", index, total_attempts, url);
+                        println!(
+                            "🚀 Success: {} | Queue: {} | Last: {}",
+                            index, total_attempts, url
+                        );
                     }
                 } else {
                     println!("Invalid Nodeinfo {}", url)
                 }
             }
             Err(e) => {
-               //println!("{}", e)
+                println!("{}", e)
             }
         }
         if total_attempts % 100 == 0 {
-            println!("📡 Progress: {} domains checked..., url: {}", total_attempts, url);
+            println!(
+                "📡 Progress: {} domains checked..., url: {}",
+                total_attempts, url
+            );
         }
     }
 
