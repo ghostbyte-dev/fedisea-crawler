@@ -1,138 +1,44 @@
+use redis::aio::ConnectionManager;
+use crate::client::HttpClient;
+use crate::db::RedisRepository;
+use crate::postgres_db::PostgresRepository;
+
+mod db;
+mod worker;
 mod client;
 mod models;
-mod storage;
-
-use crate::client::fetch_instance;
-use crate::storage::save_data;
-use dashmap::DashSet;
-use dotenv::dotenv;
-use futures::StreamExt;
-use sqlx::PgPool;
-use std::env;
-use std::sync::Arc;
-use std::time::{Duration, SystemTime};
-use tokio::sync::mpsc;
-use tokio::time::timeout;
-use tokio_stream::wrappers::ReceiverStream;
+mod postgres_db;
 
 #[tokio::main]
 async fn main() {
-    let now = SystemTime::now();
+    let redis_client = redis::Client::open("redis://127.0.0.1/").expect("Failed to create redis client");
+    let redis_manager = ConnectionManager::new(redis_client).await.expect("Failed to create redis manager");
+    let redis_repo = RedisRepository::new(redis_manager);
 
-    let found_urls = Arc::new(DashSet::new());
+    let pg_url = "postgres://fedisea:Aut-1251@localhost/fedisea";
+    let pg_pool = sqlx::PgPool::connect(pg_url).await.expect("Failed to connect to postgres pool");
+    let pg_repo = PostgresRepository::new(pg_pool);
 
-    let http_client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(4))
-        .connect_timeout(Duration::from_secs(1))
-        .user_agent("FediseaCrawler/1.0")
-        .pool_max_idle_per_host(1)
-        .hickory_dns(true)
-        .pool_idle_timeout(Duration::from_secs(1))
-        .build()
-        .expect("reqwest client failed");
+    let http_client = HttpClient::new();
 
-    let shared_client = Arc::new(http_client);
-    dotenv().ok();
-    let database_url = env::var("DB_CONNECTION_STRING").expect("DB_CONNECTION_STRING must be set");
-    let postgres_client = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(50) // Match your buffer_unordered count
-        .acquire_timeout(Duration::from_secs(30))
-        .connect(&database_url)
-        .await
-        .expect("connect to db failed");
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH).expect("Time went backwards").as_secs() + 10;
 
-    let (tx, rx) = mpsc::channel::<String>(5000);
+    redis_repo.mark_as_seen("mastodon.social").await.expect("Failed to mark mastodon");
+    redis_repo.enqueue_job("mastodon.social", now).await.expect("Failed to enqueue mastodon");
 
-    let discover_tx = tx.clone();
-    drop(tx);
-    let seed = "pixelfed.social";
-    discover_tx
-        .send(seed.to_string())
-        .await
-        .expect("send failed");
-    found_urls.insert(seed.to_string());
+    redis_repo.mark_as_seen("pixelfed.social").await.expect("Failed to mark mastodon");
+    redis_repo.enqueue_job("pixelfed.social", now + 10).await.expect("Failed to enqueue mastodon");
 
-    let mut db_set = tokio::task::JoinSet::new();
-
-    let mut stream = ReceiverStream::new(rx)
-        .map(|url: String| {
-            let client = shared_client.clone();
-            let visited_clone = found_urls.clone();
-            let tx_discovery = discover_tx.clone(); // Clone sender for the task
-
-            async move {
-                let fetch_future = fetch_instance(url.clone(), client);
-
-                match tokio::time::timeout(Duration::from_secs(2), fetch_future).await {
-                    Ok(Ok(result_tuple)) => {
-                        let peers = result_tuple.1.clone();
-                        tokio::spawn(async move {
-                            for peer in peers {
-                                if !peer.contains("troll") && visited_clone.insert(peer.clone()) {
-                                    let _ = tx_discovery.send(peer).await;
-                                }
-                            }
-                        });
-
-                        (url, Ok(result_tuple))
-                    }
-                    Ok(Err(e)) => (url, Err(e)),
-                    Err(_) => (url, Err(anyhow::anyhow!("Task timed out"))),
-                }
-            }
-        })
-        .buffer_unordered(50);
-
-    let mut index = 0;
-    let mut total_attempts = 0;
-    while let Ok(Some((url, result))) = timeout(Duration::from_secs(15), stream.next()).await {
-        total_attempts += 1;
-
-        match result {
-            Ok(result_tuple) => {
-                if let Some(node_info) = result_tuple.0 {
-                    let pool_clone = postgres_client.clone();
-                    let url_for_db = url.clone(); // Clone for the async move
-
-                    db_set.spawn(async move {
-                        save_data(url_for_db, node_info, &pool_clone).await;
-                    });
-                    if url.trim() == "pixelix.social" {
-                        println!("PIXELIX.social")
-                    }
-                    println!("success");
-                    index += 1;
-                    if index % 10 == 0 {
-                        println!(
-                            "🚀 Success: {} | Queue: {} | Last: {}",
-                            index, total_attempts, url
-                        );
-                    }
-                } else {
-                    println!("Invalid Nodeinfo {}", url)
-                }
-            }
-            Err(e) => {
-                println!("{}", e)
-            }
+    let repo_for_worker = redis_repo.clone();
+    let postgres_for_worker = pg_repo.clone();
+    let http_client_for_worker = http_client.clone();
+    tokio::spawn(
+        async move {
+            worker::run_worker(repo_for_worker, postgres_for_worker, http_client_for_worker).await;
         }
-        if total_attempts % 100 == 0 {
-            println!(
-                "📡 Progress: {} domains checked..., url: {}",
-                total_attempts, url
-            );
-        }
-    }
+    );
 
-    println!("finish db updates");
-    while let Some(_) = db_set.join_next().await {}
-    println!("finished db updates");
-    match now.elapsed() {
-        Ok(elapsed) => {
-            println!("{} sec", elapsed.as_secs());
-        }
-        Err(e) => {
-            println!("Great Scott! {e:?}");
-        }
-    }
+    tokio::signal::ctrl_c().await.expect("failed to listen for event");
+    println!("Shutting down...");
 }
