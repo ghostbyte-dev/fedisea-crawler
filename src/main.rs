@@ -51,17 +51,22 @@ async fn main() {
             let tx_discovery = discover_tx.clone();
 
             async move {
-                let result = fetch_instance(url.clone(), client).await;
+                // Use a 5-second "total task timeout" so one hanging DNS query
+                // can't block a buffer slot forever.
+                let fetch_future = fetch_instance(url.clone(), client);
 
-                if let Ok(ref result_tuple) = result {
-                    for peer in &result_tuple.1 {
-                        if !peer.contains("troll") && visited_clone.insert(peer.clone()) {
-                            let _ = tx_discovery.send(peer.clone());
+                match tokio::time::timeout(Duration::from_secs(5), fetch_future).await {
+                    Ok(Ok(result_tuple)) => {
+                        for peer in &result_tuple.1 {
+                            if !peer.contains("troll") && visited_clone.insert(peer.clone()) {
+                                let _ = tx_discovery.send(peer.clone());
+                            }
                         }
+                        (url, Ok(result_tuple))
                     }
+                    Ok(Err(e)) => (url, Err(e)),
+                    Err(_) => (url, Err(anyhow::anyhow!("Task timed out")))
                 }
-
-                (url, result)
             }
         })
         .buffer_unordered(20);
