@@ -34,7 +34,6 @@ impl HttpClient {
         let final_host = final_url.host_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid host in final URL"))?
             .to_string();
-        println!("final URL: {}", final_url);
 
         let node_info_links: WellKnown = resp.json().await?;
 
@@ -69,9 +68,9 @@ impl HttpClient {
             .await?;
         Ok(res)
     }
-    pub async fn are_robots_allowed(&self, instance: &str) -> bool {
+    pub async fn are_robots_allowed(&self, instance: &str) -> Result<bool, anyhow::Error> {
         let Ok(domain) = Url::parse(&format!("https://{}", instance)) else {
-            return false;
+            return Err(anyhow::anyhow!("Invalid Instance url {}", instance));
         };
 
         let robots_url = format!(
@@ -85,16 +84,16 @@ impl HttpClient {
         let body = match response {
             Ok(res) if res.status().is_success() => res.text().await.unwrap_or_default(),
             Ok(res) if res.status() == reqwest::StatusCode::NOT_FOUND => {
-                return true;
+                return Ok(true);
             }
-            _ => return false,
+            _ => return Err(anyhow::anyhow!("Failed to get robots.txt response")),
         };
 
         let robots = RobotsTxt::parse(&body);
         let target_path = "/.well-known/nodeinfo";
-        robots.can_fetch(
+        Ok(robots.can_fetch(
             "Fedisea (https://github.com/ghostbyte-dev/fedisea-crawler)",
             target_path,
-        )
+        ))
     }
 }

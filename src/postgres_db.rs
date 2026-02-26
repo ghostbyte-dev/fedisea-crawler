@@ -56,7 +56,7 @@ impl PostgresRepository {
             status = EXCLUDED.status,
             last_seen = NOW();
     ";
-
+    println!("{}", instance);
         // Note: Use &self.pool (reference) and ensure types match (i32/i64)
         let result = sqlx::query(query)
             .bind(instance.clone())
@@ -78,6 +78,7 @@ impl PostgresRepository {
     }
 
     pub async fn update_status(&self, domain: &str, status: InstanceStatus) {
+
         let query = "
         INSERT INTO instance (domain, status, last_seen)
         VALUES ($1, $2, NOW())

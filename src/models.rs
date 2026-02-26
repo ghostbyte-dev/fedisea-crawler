@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use thiserror::Error;
 
 #[derive(Deserialize)]
 pub struct WellKnown {
@@ -40,13 +41,11 @@ pub struct UsersUsage {
     pub active_month: Option<i32>
 }
 
-#[derive(sqlx::Type)]
-#[sqlx(type_name = "instance_status", rename_all = "lowercase")]
 pub enum InstanceStatus {
     ACTIVE,
     DEAD,
     DOWN,
-    ERROR,
+    ROBOTTXT
 }
 
 impl InstanceStatus {
@@ -55,7 +54,19 @@ impl InstanceStatus {
             Self::ACTIVE => "ACTIVE",
             Self::DEAD => "DEAD",
             Self::DOWN => "DOWN",
-            Self::ERROR => "ERROR",
+            Self::ROBOTTXT => "ROBOTTXT"
         }
     }
+}
+
+#[derive(Error, Debug)]
+pub enum CrawlerError {
+    #[error("Robots.txt forbids crawling for {0}")]
+    RobotsForbidden(String),
+
+    #[error("Network error or timeout: {0}")]
+    NetworkError(String),
+
+    #[error("Invalid NodeInfo format or missing links")]
+    InvalidMetadata,
 }

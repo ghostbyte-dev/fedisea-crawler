@@ -13,3 +13,4 @@ sqlx = { version = "0.8.6", features = [ "postgres", "runtime-tokio", "tls-rustl
 dotenvy = "0.15"
 robotstxt-rs = "0.1.4"
 regex = "1.12.3"
+thiserror = "2.0.18"

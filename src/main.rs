@@ -40,15 +40,8 @@ async fn main() {
 
     let http_client = HttpClient::new();
 
-    /* let now = std::time::SystemTime::now()
-         .duration_since(std::time::UNIX_EPOCH).expect("Time went backwards").as_secs() + 10;
-
-    redis_repo.mark_as_seen("mastodon.social").await.expect("Failed to mark mastodon");
-     redis_repo.enqueue_job("mastodon.social", now as i64).await.expect("Failed to enqueue mastodon");*/
-    /*
-        redis_repo.mark_as_seen("pixelfed.social").await.expect("Failed to mark mastodon");
-        redis_repo.enqueue_job("pixelfed.social", now as i64).await.expect("Failed to enqueue mastodon");
-    */
+    //add seed in the first run
+   // add_seed(redis_repo.clone()).await;
 
     for i in 0..WORKERS {
         let r_repo = redis_repo.clone();
@@ -65,4 +58,28 @@ async fn main() {
         .await
         .expect("failed to listen for event");
     println!("Shutting down...");
+}
+
+async fn add_seed(redis_repository: RedisRepository) {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_secs()
+        + 10;
+    redis_repository
+        .mark_as_seen("mastodon.social")
+        .await
+        .expect("Failed to mark mastodon");
+    redis_repository
+        .enqueue_job("mastodon.social", now as i64)
+        .await
+        .expect("Failed to enqueue mastodon");
+    redis_repository
+        .mark_as_seen("pixelfed.social")
+        .await
+        .expect("Failed to mark mastodon");
+    redis_repository
+        .enqueue_job("pixelfed.social", now as i64)
+        .await
+        .expect("Failed to enqueue mastodon");
 }
