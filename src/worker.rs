@@ -1,7 +1,7 @@
 use crate::client::HttpClient;
 use crate::db::RedisRepository;
 use crate::domain_filter::is_valid;
-use crate::models::{CrawlerError, InstanceStatus, Nodeinfo, WellKnown};
+use crate::models::{CrawlerError, InstanceInfo, InstanceStatus, Nodeinfo, WellKnown};
 use crate::postgres_db::PostgresRepository;
 use anyhow::anyhow;
 
@@ -18,15 +18,12 @@ pub async fn run_worker(
                     .duration_since(std::time::UNIX_EPOCH)
                     .expect("Time went backwards")
                     .as_secs() as i64;
-                match process_instance(&instance, &http_client, &redis_repo)
-                    .await
-                {
-                    Ok((instance, nodeinfo, delay)) => {
-                        println!("success: {}", instance);
+                match process_instance(&instance, &http_client, &redis_repo).await {
+                    Ok((instance, nodeinfo, instance_info, delay)) => {
                         redis_repo.reset_failure(&instance).await;
                         redis_repo.enqueue_job(&instance, now + delay).await.ok();
                         postgres_repository
-                            .save_data(instance.to_string(), nodeinfo)
+                            .save_data(instance.to_string(), nodeinfo, instance_info)
                             .await;
                     }
                     Err(CrawlerError::RobotsForbidden(instance)) => {
@@ -38,8 +35,7 @@ pub async fn run_worker(
                             .await
                             .ok();
                     }
-                    Err(_) => {
-                        println!("Failed to process instance: {}", instance);
+                    Err(e) => {
                         let fail_count = redis_repo.increment_failure(&instance).await;
 
                         let days = (2_i64.pow(fail_count.saturating_sub(1) as u32)).min(30);
@@ -72,9 +68,9 @@ pub async fn process_instance(
     instance: &str,
     http: &HttpClient,
     redis_repo: &RedisRepository,
-) -> anyhow::Result<(String, Nodeinfo, i64), CrawlerError> {
+) -> anyhow::Result<(String, Nodeinfo, Option<InstanceInfo>, i64), CrawlerError> {
     match http.are_robots_allowed(instance).await {
-        Ok(true) => {},
+        Ok(true) => {}
         Ok(false) => return Err(CrawlerError::RobotsForbidden(instance.to_string())),
         Err(e) => return Err(CrawlerError::NetworkError("Failed to fetch".to_string())),
     }
@@ -98,6 +94,21 @@ pub async fn process_instance(
         .await
         .map_err(|e| CrawlerError::NetworkError(e.to_string()))?;
 
+    let instance_info: Option<InstanceInfo> = match info.software.name.as_str() {
+        "mastodon" | "pixelfed" | "pleroma" => {
+            http.fetch_instance_info_mastodonish(&instance).await.ok()
+        }
+        "lemmy" => http.fetch_instance_info_lemmy(&instance).await.ok(),
+        "peertube" => http.fetch_instance_info_peertube(&instance).await.ok(),
+        "misskey" => http.fetch_instance_info_misskey(&instance).await.ok(),
+        _ => None,
+    };
+
+    handle_peers(redis_repo, http, instance.clone()).await;
+    Ok((instance, info, instance_info, 604800))
+}
+
+async fn handle_peers(redis_repo: &RedisRepository, http: &HttpClient, instance: String) {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("Time went backwards")
@@ -113,6 +124,4 @@ pub async fn process_instance(
             }
         }
     }
-
-    Ok((instance, info, 604800))
 }

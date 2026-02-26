@@ -1,8 +1,12 @@
 use crate::consts::USER_AGENT;
-use crate::models::{Nodeinfo, WellKnown};
+use crate::models::{
+    InstanceInfo, LemmyInfoResponse, MastodonV2Response, MisskeyInfoResponse, Nodeinfo,
+    PeertubeInfoResponse, WellKnown,
+};
 use reqwest::{Client, Url};
-use robotstxt_rs::RobotsTxt;
+use robotxt::Robots;
 use std::time::Duration;
+use serde_json::json;
 
 #[derive(Clone)]
 pub struct HttpClient {
@@ -20,18 +24,18 @@ impl HttpClient {
         Self { http }
     }
 
-    pub async fn fetch_well_known(&self, instance: String) -> Result<(WellKnown, String), anyhow::Error> {
+    pub async fn fetch_well_known(
+        &self,
+        instance: String,
+    ) -> Result<(WellKnown, String), anyhow::Error> {
         let url = format!("https://{}/.well-known/nodeinfo", instance,);
         let url = Url::parse(&*url)?;
 
-        let resp = self.http
-            .get(url)
-            .send()
-            .await?
-            .error_for_status()?;
+        let resp = self.http.get(url).send().await?.error_for_status()?;
 
         let final_url = resp.url().clone();
-        let final_host = final_url.host_str()
+        let final_host = final_url
+            .host_str()
             .ok_or_else(|| anyhow::anyhow!("Invalid host in final URL"))?
             .to_string();
 
@@ -89,11 +93,87 @@ impl HttpClient {
             _ => return Err(anyhow::anyhow!("Failed to get robots.txt response")),
         };
 
-        let robots = RobotsTxt::parse(&body);
         let target_path = "/.well-known/nodeinfo";
-        Ok(robots.can_fetch(
-            "Fedisea (https://github.com/ghostbyte-dev/fedisea-crawler)",
-            target_path,
-        ))
+        let r = Robots::from_bytes(body.as_bytes(), USER_AGENT);
+
+        Ok(r.is_relative_allowed(target_path))
+    }
+
+    pub async fn fetch_instance_info_mastodonish(
+        &self,
+        instance: &str,
+    ) -> Result<InstanceInfo, anyhow::Error> {
+        let url = format!("https://{}/api/v2/instance", instance);
+        let url = Url::parse(&url)?;
+
+        let res: MastodonV2Response = self
+            .http
+            .get(url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+
+        Ok(InstanceInfo::from(res))
+    }
+
+    pub async fn fetch_instance_info_lemmy(
+        &self,
+        instance: &str,
+    ) -> Result<InstanceInfo, anyhow::Error> {
+        let url = format!("https://{}/api/v3/site", instance);
+        let url = Url::parse(&url)?;
+
+        let res: LemmyInfoResponse = self
+            .http
+            .get(url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+
+        Ok(InstanceInfo::from(res))
+    }
+
+    pub async fn fetch_instance_info_peertube(
+        &self,
+        instance: &str,
+    ) -> Result<InstanceInfo, anyhow::Error> {
+        let url = format!("https://{}/api/v1/config/about", instance);
+        let url = Url::parse(&url)?;
+
+        let res: PeertubeInfoResponse = self
+            .http
+            .get(url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+
+        Ok(InstanceInfo::from(res))
+    }
+
+    pub async fn fetch_instance_info_misskey(
+        &self,
+        instance: &str,
+    ) -> Result<InstanceInfo, anyhow::Error> {
+        println!("misskey");
+        let url = format!("https://{}/api/meta", instance);
+        let url = Url::parse(&url)?;
+
+        let res: MisskeyInfoResponse = self
+            .http
+            .post(url)
+            .json(&json!({ "detail": false })) // Add the body here
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        println!("success");
+        Ok(InstanceInfo::from(res))
     }
 }
