@@ -64,7 +64,7 @@ impl HttpClient {
             .await?;
         Ok(res)
     }
-    pub async fn are_roots_allowed(&self, instance: &str) -> bool {
+    pub async fn are_robots_allowed(&self, instance: &str) -> bool {
         let Ok(domain) = Url::parse(&format!("https://{}", instance)) else {
             return false;
         };

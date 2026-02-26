@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use crate::client::HttpClient;
 use crate::db::RedisRepository;
 use crate::domain_filter::is_valid;
@@ -48,8 +49,8 @@ async fn process_instance(
     pg_repo: &PostgresRepository,
     redis_repo: &RedisRepository,
 ) -> anyhow::Result<i64> {
-    if !http.are_roots_allowed(instance).await {
-        return Ok(604800);
+    if !http.are_robots_allowed(instance).await {
+        return Err(anyhow!("Robots are not allowed for instance: {}", instance));
     }
     let well_known = http.fetch_well_known(instance.to_string()).await?;
     let nodeinfo_url = well_known.links.first()
