@@ -1,5 +1,6 @@
 use crate::client::HttpClient;
 use crate::db::RedisRepository;
+use crate::domain_filter::is_valid;
 use crate::models::InstanceStatus;
 use crate::postgres_db::PostgresRepository;
 
@@ -63,7 +64,8 @@ async fn process_instance(
 
     if let Ok(peers) = http.fetch_peers(instance.to_string()).await {
         for peer in peers {
-            if !peer.contains("troll") {
+
+            if is_valid(&peer) {
                 if redis_repo.mark_as_seen(&peer).await.unwrap_or(false) {
                     let _ = redis_repo.enqueue_job(&peer, now as i64).await;
                 }
