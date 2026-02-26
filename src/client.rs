@@ -20,20 +20,25 @@ impl HttpClient {
         Self { http }
     }
 
-    pub async fn fetch_well_known(&self, instance: String) -> Result<WellKnown, anyhow::Error> {
+    pub async fn fetch_well_known(&self, instance: String) -> Result<(WellKnown, String), anyhow::Error> {
         let url = format!("https://{}/.well-known/nodeinfo", instance,);
         let url = Url::parse(&*url)?;
 
-        let response: WellKnown = self
-            .http
+        let resp = self.http
             .get(url)
             .send()
             .await?
-            .error_for_status()?
-            .json()
-            .await?;
+            .error_for_status()?;
 
-        Ok(response)
+        let final_url = resp.url().clone();
+        let final_host = final_url.host_str()
+            .ok_or_else(|| anyhow::anyhow!("Invalid host in final URL"))?
+            .to_string();
+        println!("final URL: {}", final_url);
+
+        let node_info_links: WellKnown = resp.json().await?;
+
+        Ok((node_info_links, final_host))
     }
 
     pub async fn fetch_peers(&self, instance: String) -> Result<Vec<String>, anyhow::Error> {

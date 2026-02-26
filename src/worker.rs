@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use crate::client::HttpClient;
 use crate::db::RedisRepository;
 use crate::domain_filter::is_valid;
-use crate::models::InstanceStatus;
+use crate::models::{InstanceStatus, WellKnown};
 use crate::postgres_db::PostgresRepository;
 
 pub async fn run_worker(redis_repo: RedisRepository, postgres_repository: PostgresRepository, http_client: HttpClient) {
@@ -14,7 +14,7 @@ pub async fn run_worker(redis_repo: RedisRepository, postgres_repository: Postgr
                     .duration_since(std::time::UNIX_EPOCH).expect("Time went backwards").as_secs() as i64;
 
                 match process_instance(&instance, &http_client, &postgres_repository, &redis_repo).await {
-                    Ok(delay) => {
+                    Ok((instance, delay)) => {
                         redis_repo.reset_failure(&instance).await;
                         redis_repo.enqueue_job(&instance, now + delay).await.ok();
                     }
@@ -43,17 +43,18 @@ pub async fn run_worker(redis_repo: RedisRepository, postgres_repository: Postgr
     }
 }
 
-async fn process_instance(
+pub async fn process_instance(
     instance: &str,
     http: &HttpClient,
     pg_repo: &PostgresRepository,
     redis_repo: &RedisRepository,
-) -> anyhow::Result<i64> {
+) -> anyhow::Result<(String, i64)> {
     if !http.are_robots_allowed(instance).await {
         return Err(anyhow!("Robots are not allowed for instance: {}", instance));
     }
-    let well_known = http.fetch_well_known(instance.to_string()).await?;
-    let nodeinfo_url = well_known.links.first()
+    let well_known: (WellKnown, String) = http.fetch_well_known(instance.to_string()).await?;
+    let instance = well_known.1;
+    let nodeinfo_url = well_known.0.links.first()
         .ok_or_else(|| anyhow::anyhow!("No links found"))?
         .href.trim();
 
@@ -74,5 +75,5 @@ async fn process_instance(
         }
     }
 
-    Ok(604800)
+    Ok((instance, 604800))
 }
