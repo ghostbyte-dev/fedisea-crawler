@@ -31,6 +31,7 @@ COPY . .
 RUN cargo build --release --bin fedisea-crawler
 
 FROM debian:bookworm-slim AS runtime
+RUN apt-get update && apt-get install -y ca-certificates libssl-dev && rm -rf /var/lib/apt/lists/*
 WORKDIR app
 COPY --from=builder /app/target/release/fedisea-crawler /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/fedisea-crawler"]
