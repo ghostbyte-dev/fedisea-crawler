@@ -58,7 +58,6 @@ async fn main() {
         .await
         .expect("failed to listen for event");
     println!("Shutting down...");
-
 }
 
 async fn add_seed(redis_repository: RedisRepository) {

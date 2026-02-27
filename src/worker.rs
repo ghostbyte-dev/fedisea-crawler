@@ -3,7 +3,7 @@ use crate::db::RedisRepository;
 use crate::domain_filter::is_valid;
 use crate::models::{CrawlerError, InstanceInfo, InstanceStatus, Nodeinfo, WellKnown};
 use crate::postgres_db::PostgresRepository;
-use anyhow::anyhow;
+use reqwest::Url;
 
 pub async fn run_worker(
     redis_repo: RedisRepository,
@@ -29,6 +29,16 @@ pub async fn run_worker(
                     Err(CrawlerError::RobotsForbidden(instance)) => {
                         postgres_repository
                             .update_status(&instance, InstanceStatus::ROBOTTXT)
+                            .await;
+                        redis_repo
+                            .enqueue_job(&instance, now + 30 * 86400)
+                            .await
+                            .ok();
+                    }
+                    Err(CrawlerError::Mismatched(points_to)) => {
+                        println!("{}", points_to);
+                        postgres_repository
+                            .set_mismatched(&instance, &points_to)
                             .await;
                         redis_repo
                             .enqueue_job(&instance, now + 30 * 86400)
@@ -80,7 +90,10 @@ pub async fn process_instance(
         .await
         .map_err(|e| CrawlerError::NetworkError(e.to_string()))?;
 
-    let instance = well_known.1;
+    if well_known.1 != instance.to_string() {
+        return Err(CrawlerError::Mismatched(well_known.1));
+    }
+
     let nodeinfo_url = well_known
         .0
         .links
@@ -88,6 +101,13 @@ pub async fn process_instance(
         .ok_or(CrawlerError::InvalidMetadata)?
         .href
         .trim();
+
+    let nodeinfo_url_domain = Url::parse(nodeinfo_url)
+        .map_err(|_| CrawlerError::InvalidMetadata)?;
+
+    if nodeinfo_url_domain.domain().unwrap_or("") != instance {
+        return Err(CrawlerError::Mismatched(nodeinfo_url_domain.domain().unwrap_or("").parse().unwrap()));
+    }
 
     let info = http
         .fetch_nodeinfo(nodeinfo_url)
@@ -104,8 +124,8 @@ pub async fn process_instance(
         _ => None,
     };
 
-    handle_peers(redis_repo, http, instance.clone()).await;
-    Ok((instance, info, instance_info, 604800))
+    handle_peers(redis_repo, http, instance.parse().unwrap()).await;
+    Ok((instance.parse().unwrap(), info, instance_info, 604800))
 }
 
 async fn handle_peers(redis_repo: &RedisRepository, http: &HttpClient, instance: String) {

@@ -30,6 +30,7 @@ impl PostgresRepository {
                 local_posts INTEGER,
                 local_comments INTEGER,
                 status TEXT,
+                points_to TEXT,
                 last_seen TIMESTAMPTZ DEFAULT NOW()
             );
             "#,
@@ -69,6 +70,7 @@ impl PostgresRepository {
             email = EXCLUDED.email,
             thumbnail = EXCLUDED.thumbnail,
             source_url = EXCLUDED.source_url,
+            points_to = NULL,
             last_seen = NOW();
     ";
 
@@ -109,6 +111,29 @@ impl PostgresRepository {
         let result = sqlx::query(query)
             .bind(domain)
             .bind(status.as_str())
+            .execute(&self.pool)
+            .await;
+
+        if let Err(e) = result {
+            eprintln!("❌ Failed to update status for {}: {}", domain, e);
+        }
+    }
+
+    pub async fn set_mismatched(&self, domain: &str, points_to: &str) {
+        let query = "
+        INSERT INTO instance (domain, status, last_seen, points_to)
+        VALUES ($1, $2, NOW(), $3)
+        ON CONFLICT (domain)
+        DO UPDATE SET
+        status = EXCLUDED.status,
+        points_to = EXCLUDED.points_to,
+        last_seen = NOW();
+        ";
+
+        let result = sqlx::query(query)
+            .bind(domain)
+            .bind(InstanceStatus::MISMATCHED.as_str())
+            .bind(points_to)
             .execute(&self.pool)
             .await;
 

@@ -45,7 +45,8 @@ pub enum InstanceStatus {
     ACTIVE,
     DEAD,
     DOWN,
-    ROBOTTXT
+    ROBOTTXT,
+    MISMATCHED
 }
 
 impl InstanceStatus {
@@ -54,7 +55,8 @@ impl InstanceStatus {
             Self::ACTIVE => "ACTIVE",
             Self::DEAD => "DEAD",
             Self::DOWN => "DOWN",
-            Self::ROBOTTXT => "ROBOTTXT"
+            Self::ROBOTTXT => "ROBOTTXT",
+            Self::MISMATCHED => "MISMATCHED"
         }
     }
 }
@@ -69,6 +71,9 @@ pub enum CrawlerError {
 
     #[error("Invalid NodeInfo format or missing links")]
     InvalidMetadata,
+
+    #[error("Mismatched url, redirects or nodeinfo url doesnt match")]
+    Mismatched(String)
 }
 
 pub struct InstanceInfo {
