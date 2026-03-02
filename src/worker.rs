@@ -44,8 +44,9 @@ pub async fn run_worker(
                             .enqueue_job(&instance, now + 30 * 86400)
                             .await
                             .ok();
+                        add_instance_to_queue(points_to, &redis_repo).await;
                     }
-                    Err(e) => {
+                    Err(_) => {
                         let fail_count = redis_repo.increment_failure(&instance).await;
 
                         let days = (2_i64.pow(fail_count.saturating_sub(1) as u32)).min(30);
@@ -82,7 +83,7 @@ pub async fn process_instance(
     match http.are_robots_allowed(instance).await {
         Ok(true) => {}
         Ok(false) => return Err(CrawlerError::RobotsForbidden(instance.to_string())),
-        Err(e) => return Err(CrawlerError::NetworkError("Failed to fetch".to_string())),
+        Err(_) => return Err(CrawlerError::NetworkError("Failed to fetch".to_string())),
     }
 
     let well_known: (WellKnown, String) = http
@@ -90,7 +91,16 @@ pub async fn process_instance(
         .await
         .map_err(|e| CrawlerError::NetworkError(e.to_string()))?;
 
-    if well_known.1 != instance.to_string() {
+    let normalize = |s: &str| {
+        s.strip_prefix("www.")
+            .unwrap_or(s)
+            .to_string()
+    };
+
+    let normalized_well_known = normalize(&well_known.1);
+    let normalized_instance = normalize(&instance.to_string());
+
+    if normalized_well_known != normalized_instance {
         return Err(CrawlerError::Mismatched(well_known.1));
     }
 
@@ -102,15 +112,16 @@ pub async fn process_instance(
         .href
         .trim();
 
-    let nodeinfo_url_domain = Url::parse(nodeinfo_url)
+    let nodeinfo_url = Url::parse(nodeinfo_url)
         .map_err(|_| CrawlerError::InvalidMetadata)?;
+    let nodeinfo_url_domain_normalized = normalize(nodeinfo_url.domain().unwrap());
 
-    if nodeinfo_url_domain.domain().unwrap_or("") != instance {
-        return Err(CrawlerError::Mismatched(nodeinfo_url_domain.domain().unwrap_or("").parse().unwrap()));
+    if nodeinfo_url_domain_normalized != normalized_instance {
+        return Err(CrawlerError::Mismatched(nodeinfo_url_domain_normalized.parse().unwrap()));
     }
 
     let info = http
-        .fetch_nodeinfo(nodeinfo_url)
+        .fetch_nodeinfo(nodeinfo_url.as_ref())
         .await
         .map_err(|e| CrawlerError::NetworkError(e.to_string()))?;
 
@@ -129,19 +140,23 @@ pub async fn process_instance(
 }
 
 async fn handle_peers(redis_repo: &RedisRepository, http: &HttpClient, instance: String) {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_secs();
-
     if let Ok(peers) = http.fetch_peers(instance.to_string()).await {
         for peer in peers {
-            let peer = peer.to_lowercase();
-            if is_valid(&peer) {
-                if redis_repo.mark_as_seen(&peer).await.unwrap_or(false) {
-                    let _ = redis_repo.enqueue_job(&peer, now as i64).await;
-                }
-            }
+            add_instance_to_queue(peer, redis_repo).await;
+        }
+    }
+}
+
+async fn add_instance_to_queue(instance: String, redis_repo: &RedisRepository) {
+    let peer = instance.to_lowercase();
+    if is_valid(&peer) {
+        if redis_repo.mark_as_seen(&peer).await.unwrap_or(false) {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("Time went backwards")
+                .as_secs();
+
+            let _ = redis_repo.enqueue_job(&peer, now as i64).await;
         }
     }
 }
