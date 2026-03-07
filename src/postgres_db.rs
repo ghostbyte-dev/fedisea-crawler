@@ -11,36 +11,6 @@ impl PostgresRepository {
         Self { pool }
     }
 
-    pub async fn init(&self) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS instance (
-                domain TEXT PRIMARY KEY,
-                title TEXT,
-                description TEXT,
-                email TEXT,
-                thumbnail TEXT,
-                source_url TEXT,
-                software TEXT,
-                software_version TEXT,
-                open_registration BOOLEAN,
-                total_users INTEGER,
-                active_users_month INTEGER,
-                active_users_halfyear INTEGER,
-                local_posts INTEGER,
-                local_comments INTEGER,
-                status TEXT,
-                points_to TEXT,
-                last_seen TIMESTAMPTZ DEFAULT NOW()
-            );
-            "#,
-        )
-        .execute(&self.pool)
-        .await?;
-
-        Ok(())
-    }
-
     pub async fn save_data(
         &self,
         instance: String,

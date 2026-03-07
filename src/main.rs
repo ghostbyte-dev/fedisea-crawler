@@ -33,11 +33,6 @@ async fn main() {
         .expect("Failed to connect to postgres pool");
     let pg_repo = PostgresRepository::new(pg_pool);
 
-    pg_repo
-        .init()
-        .await
-        .expect("Failed to initialize database tables");
-
     let http_client = HttpClient::new();
 
    // add seed in the first run
