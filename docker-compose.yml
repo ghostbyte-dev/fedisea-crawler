@@ -14,7 +14,7 @@ services:
       timeout: 3s
       retries: 5
   crawler:
-    build: . # Looks for a Dockerfile in your current directory
+    build: .
     container_name: rust-crawler
     restart: always
     environment:
@@ -27,25 +27,7 @@ services:
         condition: service_healthy
     networks:
       - crawler-network
-  db:
-    image: postgres:15-alpine
-    container_name: postgres
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - crawler-network
-
+      - fedisea-network
 volumes:
   redis-data:
     driver: local
@@ -54,3 +36,5 @@ volumes:
 networks:
   crawler-network:
     driver: bridge
+  fedisea-network:
+    external: true
