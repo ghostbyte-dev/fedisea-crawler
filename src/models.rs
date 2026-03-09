@@ -82,7 +82,6 @@ pub struct InstanceInfo {
     pub email: Option<String>,
     pub thumbnail: Option<String>,
     pub source_url: Option<String>,
-    pub icon: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -112,7 +111,6 @@ impl From<MastodonV2Response> for InstanceInfo {
             email: m.contact.email,
             thumbnail: m.thumbnail.url,
             source_url: m.source_url,
-            icon: None
         }
     }
 }
@@ -142,7 +140,6 @@ impl From<LemmyInfoResponse> for InstanceInfo {
             email: None,
             thumbnail: None,
             source_url: None,
-            icon: None,
         }
     }
 }
@@ -167,7 +164,6 @@ impl From<PeertubeInfoResponse> for InstanceInfo {
             email: None,
             thumbnail: None,
             source_url: None,
-            icon: None
         }
     }
 }
@@ -190,7 +186,6 @@ impl From<MisskeyInfoResponse> for InstanceInfo {
             email: None,
             thumbnail: m.background_image_url,
             source_url: m.repository_url,
-            icon: m.icon_url
         }
     }
 }

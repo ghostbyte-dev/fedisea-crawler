@@ -1,7 +1,6 @@
 use crate::client::HttpClient;
 use crate::consts::WORKERS;
 use crate::db::RedisRepository;
-use crate::domain_filter::is_valid;
 use crate::postgres_db::PostgresRepository;
 use dotenvy::dotenv;
 use redis::aio::ConnectionManager;
@@ -15,6 +14,8 @@ mod models;
 mod postgres_db;
 mod worker;
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 #[tokio::main]
 async fn main() {
     dotenv().ok();
