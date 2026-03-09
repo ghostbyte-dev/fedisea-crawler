@@ -14,7 +14,7 @@ services:
       timeout: 3s
       retries: 5
   crawler:
-    image: ghcr.io/your-username/fedisea-crawler:latest
+    image: ghcr.io/ghostbyte-dev/fedisea-crawler:latest
     container_name: rust-crawler
     restart: always
     environment:
