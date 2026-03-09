@@ -29,6 +29,7 @@ services:
     deploy:
       resources:
         limits:
+          cpus: '0.50'
           memory: 512M
 volumes:
   redis-data:

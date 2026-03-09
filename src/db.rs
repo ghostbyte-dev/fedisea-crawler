@@ -63,4 +63,37 @@ impl RedisRepository {
         let mut conn = self.manager.clone();
         let _: () = conn.hset(format!("stats:{}", domain), "fail_count", 0).await.unwrap_or(());
     }
+
+    pub async fn enqueue_batch_if_new(&self, mut domains: Vec<String>) -> anyhow::Result<()> {
+        let mut conn = self.manager.clone();
+
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs();
+
+        let script = redis::Script::new(r"
+        local now = table.remove(ARGV, 1)
+        local added = 0
+        for i, domain in ipairs(ARGV) do
+            if redis.call('SADD', KEYS[1], domain) == 1 then
+                redis.call('ZADD', KEYS[2], now, domain)
+                added = added + 1
+            end
+        end
+        return added
+    ");
+
+        domains.insert(0, now.to_string());
+
+        let added_count: i32 = script
+            .key("crawler:seen_set")
+            .key("crawler:queue")
+            .arg(&domains)
+            .invoke_async::<i32>(&mut conn)
+            .await?;
+
+        println!("{}", added_count);
+
+        Ok(())
+    }
 }

@@ -141,26 +141,23 @@ pub async fn process_instance(
 }
 
 async fn handle_peers(redis_repo: &RedisRepository, http: &HttpClient, instance: String) {
-    let peers = match http.fetch_peers(instance).await {
-        Ok(p) => p,
-        Err(_) => return,
-    };
+    if let Ok(peers) = http.fetch_peers(instance).await {
+        for chunk in peers.chunks(100) {
+            let mut to_process = Vec::new();
+            for peer in chunk {
+                let p = peer.to_lowercase();
+                if is_valid(&p) {
+                    to_process.push(p);
+                }
+            }
 
-    let mut workers = FuturesUnordered::new();
-    let max_concurrent_redis_calls = 50;
+            if !to_process.is_empty() {
+                let _ = redis_repo.enqueue_batch_if_new(to_process).await;
+            }
 
-    for peer in peers {
-        if workers.len() >= max_concurrent_redis_calls {
-            workers.next().await;
+            tokio::task::yield_now().await;
         }
-
-        let r_repo = redis_repo.clone();
-        workers.push(async move {
-            add_instance_to_queue(peer, &r_repo).await;
-        });
     }
-
-    while let Some(_) = workers.next().await {}
     println!("finished peers")
 }
 
