@@ -4,6 +4,7 @@ use crate::domain_filter::is_valid;
 use crate::models::{CrawlerError, InstanceInfo, InstanceStatus, Nodeinfo, WellKnown};
 use crate::postgres_db::PostgresRepository;
 use reqwest::Url;
+use futures::stream::{StreamExt, FuturesUnordered};
 
 pub async fn run_worker(
     redis_repo: RedisRepository,
@@ -140,11 +141,27 @@ pub async fn process_instance(
 }
 
 async fn handle_peers(redis_repo: &RedisRepository, http: &HttpClient, instance: String) {
-    if let Ok(peers) = http.fetch_peers(instance.to_string()).await {
-        for peer in peers {
-            add_instance_to_queue(peer, redis_repo).await;
+    let peers = match http.fetch_peers(instance).await {
+        Ok(p) => p,
+        Err(_) => return,
+    };
+
+    let mut workers = FuturesUnordered::new();
+    let max_concurrent_redis_calls = 50;
+
+    for peer in peers {
+        if workers.len() >= max_concurrent_redis_calls {
+            workers.next().await;
         }
+
+        let r_repo = redis_repo.clone();
+        workers.push(async move {
+            add_instance_to_queue(peer, &r_repo).await;
+        });
     }
+
+    while let Some(_) = workers.next().await {}
+    println!("finished peers")
 }
 
 async fn add_instance_to_queue(instance: String, redis_repo: &RedisRepository) {
