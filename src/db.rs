@@ -91,9 +91,7 @@ impl RedisRepository {
             .arg(&domains)
             .invoke_async::<i32>(&mut conn)
             .await?;
-
-        println!("{}", added_count);
-
+        
         Ok(())
     }
 }

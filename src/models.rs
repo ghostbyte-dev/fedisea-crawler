@@ -175,7 +175,6 @@ pub struct MisskeyInfoResponse {
     description: Option<String>,
     repository_url: Option<String>,
     background_image_url: Option<String>,
-    icon_url: Option<String>,
 }
 
 impl From<MisskeyInfoResponse> for InstanceInfo {

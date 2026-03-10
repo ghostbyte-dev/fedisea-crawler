@@ -36,10 +36,10 @@ async fn main() {
 
     let http_client = HttpClient::new();
 
-    // add seed in the first run
-    //add_seed(redis_repo.clone()).await;
+   // add seed in the first run
+   //add_seed(redis_repo.clone()).await;
 
-    for i in 0..WORKERS {
+   for i in 0..WORKERS {
         let r_repo = redis_repo.clone();
         let p_repo = pg_repo.clone();
         let h_client = http_client.clone();

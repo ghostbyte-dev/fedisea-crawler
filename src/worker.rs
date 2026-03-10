@@ -158,7 +158,6 @@ async fn handle_peers(redis_repo: &RedisRepository, http: &HttpClient, instance:
             tokio::task::yield_now().await;
         }
     }
-    println!("finished peers")
 }
 
 async fn add_instance_to_queue(instance: String, redis_repo: &RedisRepository) {
