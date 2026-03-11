@@ -5,6 +5,7 @@ use crate::postgres_db::PostgresRepository;
 use dotenvy::dotenv;
 use redis::aio::ConnectionManager;
 use std::env;
+extern crate jemallocator;
 
 mod client;
 mod consts;
@@ -15,8 +16,7 @@ mod postgres_db;
 mod worker;
 
 #[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-#[tokio::main]
+static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;#[tokio::main]
 async fn main() {
     dotenv().ok();
 

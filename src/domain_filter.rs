@@ -1,12 +1,26 @@
 use regex::Regex;
 
 pub fn is_valid(domain: &str) -> bool {
+
+    //TODO: improve is valid function
     if domain.contains("activitypub-troll") {
-        return false
+        return false;
     }
-    let domain_regex = Regex::new(r"(?i)^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,63}$").unwrap();
-    if !domain_regex.is_match(domain) {
-        return false
+
+    if domain.len() > 253 {
+        return false;
     }
-    true
+
+    let parts: Vec<&str> = domain.split('.').collect();
+    if parts.len() < 2 {
+        return false;
+    }
+
+    parts.iter().all(|label| {
+        !label.is_empty()
+            && label.len() <= 63
+            && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+            && !label.starts_with('-')
+            && !label.ends_with('-')
+    })
 }
