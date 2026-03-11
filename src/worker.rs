@@ -5,6 +5,7 @@ use crate::models::{CrawlerError, InstanceInfo, InstanceStatus, Nodeinfo, WellKn
 use crate::postgres_db::PostgresRepository;
 use reqwest::Url;
 use futures::stream::{StreamExt, FuturesUnordered};
+use tokio::time::interval;
 
 pub async fn run_worker(
     redis_repo: RedisRepository,
@@ -92,19 +93,9 @@ pub async fn process_instance(
         .await
         .map_err(|e| CrawlerError::NetworkError(e.to_string()))?;
 
-    let normalize = |s: &str| {
-        s.strip_prefix("www.")
-            .unwrap_or(s)
-            .to_string()
-    };
-
-    let normalized_well_known = normalize(&well_known.1);
-    let normalized_instance = normalize(&instance.to_string());
-
-    if normalized_well_known != normalized_instance {
+    if well_known.1 != instance {
         return Err(CrawlerError::Mismatched(well_known.1));
     }
-
     let nodeinfo_url = well_known
         .0
         .links
@@ -115,9 +106,9 @@ pub async fn process_instance(
 
     let nodeinfo_url = Url::parse(nodeinfo_url)
         .map_err(|_| CrawlerError::InvalidMetadata)?;
-    let nodeinfo_url_domain_normalized = normalize(nodeinfo_url.domain().unwrap());
+    let nodeinfo_url_domain_normalized = nodeinfo_url.domain().unwrap();
 
-    if nodeinfo_url_domain_normalized != normalized_instance {
+    if nodeinfo_url_domain_normalized != instance {
         return Err(CrawlerError::Mismatched(nodeinfo_url_domain_normalized.parse().unwrap()));
     }
 
