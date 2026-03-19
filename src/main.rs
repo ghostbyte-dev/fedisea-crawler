@@ -5,6 +5,8 @@ use crate::postgres_db::PostgresRepository;
 use dotenvy::dotenv;
 use redis::aio::ConnectionManager;
 use std::env;
+use sqlx::postgres::PgPoolOptions;
+
 extern crate jemallocator;
 
 mod client;
@@ -30,7 +32,12 @@ async fn main() {
     let redis_repo = RedisRepository::new(redis_manager);
 
     let pg_url = env::var("DB_CONNECTION_STRING").expect("DATABASE_URL must be set");
-    let pg_pool = sqlx::PgPool::connect(&*pg_url)
+    let pg_pool = PgPoolOptions::new()
+        .max_connections(5)
+        .min_connections(1)
+        .acquire_timeout(std::time::Duration::from_secs(3))
+        .idle_timeout(std::time::Duration::from_secs(60))
+        .connect(&pg_url)
         .await
         .expect("Failed to connect to postgres pool");
     let pg_repo = PostgresRepository::new(pg_pool);

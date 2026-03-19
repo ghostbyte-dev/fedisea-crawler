@@ -18,6 +18,8 @@ impl HttpClient {
         let http = Client::builder()
             .timeout(Duration::from_secs(10))
             .user_agent(USER_AGENT)
+            .pool_idle_timeout(Duration::from_secs(30))
+            .pool_max_idle_per_host(1)
             .build()
             .unwrap();
 
