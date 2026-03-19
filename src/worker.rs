@@ -23,10 +23,18 @@ pub async fn run_worker(
                 match process_instance(&instance, &http_client, &redis_repo).await {
                     Ok((instance, nodeinfo, instance_info, delay)) => {
                         redis_repo.reset_failure(&instance).await;
-                        redis_repo.enqueue_job(&instance, now + delay).await.ok();
-                        postgres_repository
+                        let db_result = postgres_repository
                             .save_data(instance.to_string(), nodeinfo, instance_info)
                             .await;
+                        match db_result {
+                            Ok(is_saved) => {
+                                if is_saved {
+                                    redis_repo.enqueue_job(&instance, now + delay).await.ok();
+                                } else {
+                                    println!("Skipping re-queue for {}: Instance is blocked.", instance);                                }
+                            }
+                            Err(e) => {}
+                        }
                     }
                     Err(CrawlerError::RobotsForbidden(instance)) => {
                         postgres_repository

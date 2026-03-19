@@ -16,7 +16,7 @@ impl PostgresRepository {
         instance: String,
         nodeinfo: Nodeinfo,
         instance_info: Option<InstanceInfo>,
-    ) {
+    ) -> Result<bool, sqlx::Error> {
 
 
         let software_result = sqlx::query(
@@ -57,7 +57,8 @@ impl PostgresRepository {
             thumbnail = EXCLUDED.thumbnail,
             source_url = EXCLUDED.source_url,
             points_to = NULL,
-            last_seen = NOW();
+            last_seen = NOW()
+        WHERE instance.status != 'BLOCKED';
     ";
 
         let result = sqlx::query(query)
@@ -90,10 +91,15 @@ impl PostgresRepository {
             .execute(&self.pool)
             .await;
 
-        if let Err(e) = result {
-            eprintln!("❌ Database error for {}: {}", instance, e);
+        match result {
+            Ok(pg_result) => {
+                Ok(pg_result.rows_affected() > 0)
+            }
+            Err(e) => {
+                eprintln!("❌ Database error for {}: {}", instance, e);
+                Err(e)
+            }
         }
-
     }
 
     pub async fn update_status(&self, domain: &str, status: InstanceStatus) {
@@ -103,7 +109,8 @@ impl PostgresRepository {
         ON CONFLICT (domain)
         DO UPDATE SET
         status = EXCLUDED.status,
-        last_seen = NOW();
+        last_seen = NOW()
+        WHERE instance.status != 'BLOCKED';
         ";
 
         let result = sqlx::query(query)
