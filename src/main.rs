@@ -17,10 +17,10 @@ mod worker;
 
 #[global_allocator]
 static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 #[tokio::main]
 async fn main() {
     dotenv().ok();
-
     let redis_url = env::var("REDIS_URL").expect("REDIS_URL must be set");
     println!("{}", redis_url);
     let redis_client = redis::Client::open(redis_url).expect("Failed to create redis client");

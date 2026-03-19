@@ -17,16 +17,32 @@ impl PostgresRepository {
         nodeinfo: Nodeinfo,
         instance_info: Option<InstanceInfo>,
     ) {
+
+
+        let software_result = sqlx::query(
+        "INSERT INTO software (identifier)
+         VALUES ($1)
+         ON CONFLICT (identifier) DO NOTHING"
+    )
+            .bind(&nodeinfo.software.name)
+            .execute(&self.pool)
+            .await;
+
+
+        if let Err(e) = software_result {
+            eprintln!("❌ Database error for inserting software {}: {}", nodeinfo.software.name, e);
+        }
+
         let query = "
         INSERT INTO instance (
-            domain, software, software_version, open_registration,
+            domain, software_id, software_version, open_registration,
             total_users, active_users_month, active_users_halfyear,
             local_posts, local_comments, status, title, description, email, thumbnail, source_url
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         ON CONFLICT (domain)
         DO UPDATE SET
-            software = EXCLUDED.software,
+            software_id = EXCLUDED.software_id,
             software_version = EXCLUDED.software_version,
             open_registration = EXCLUDED.open_registration,
             total_users = EXCLUDED.total_users,
@@ -56,7 +72,18 @@ impl PostgresRepository {
             .bind(nodeinfo.usage.local_comments)
             .bind(InstanceStatus::ACTIVE.as_str())
             .bind(instance_info.as_ref().map(|i| &i.title))
-            .bind(instance_info.as_ref().map(|i| &i.description))
+            .bind(instance_info.as_ref().and_then(|i| {
+                i.description.as_ref().map(|desc| {
+                    if desc.len() <= 255 {
+                        desc.as_str()
+                    } else {
+                        match desc.char_indices().nth(255) {
+                            Some((idx, _)) => &desc[..idx],
+                            None => desc.as_str(),
+                        }
+                    }
+                })
+            }))
             .bind(instance_info.as_ref().map(|i| &i.email))
             .bind(instance_info.as_ref().map(|i| &i.thumbnail))
             .bind(instance_info.as_ref().map(|i| &i.source_url))
@@ -66,6 +93,7 @@ impl PostgresRepository {
         if let Err(e) = result {
             eprintln!("❌ Database error for {}: {}", instance, e);
         }
+
     }
 
     pub async fn update_status(&self, domain: &str, status: InstanceStatus) {
