@@ -74,7 +74,9 @@ impl HttpClient {
             .await?;
         Ok(res)
     }
+
     pub async fn are_robots_allowed(&self, instance: &str) -> Result<bool, anyhow::Error> {
+
         let Ok(domain) = Url::parse(&format!("https://{}", instance)) else {
             return Err(anyhow::anyhow!("Invalid Instance url {}", instance));
         };
@@ -85,19 +87,21 @@ impl HttpClient {
             domain.host_str().unwrap_or("")
         );
 
-        let response = self.http.get(&robots_url).send().await;
+        let response = self.http.get(&robots_url).send().await.map_err(|e| {
+            anyhow::anyhow!("Network error: {}", e)
+        })?;
 
-        let body = match response {
-            Ok(res) if res.status().is_success() => res.text().await.unwrap_or_default(),
-            Ok(res) if res.status() == reqwest::StatusCode::NOT_FOUND => {
-                return Ok(true);
-            }
-            _ => return Err(anyhow::anyhow!("Failed to get robots.txt response")),
+        let status = response.status();
+        let body = if status.is_success() {
+            response.text().await.unwrap_or_default()
+        } else if status == reqwest::StatusCode::NOT_FOUND {
+            return Ok(true);
+        } else {
+            return Ok(true);
         };
 
         let target_path = "/.well-known/nodeinfo";
         let r = Robots::from_bytes(body.as_bytes(), USER_AGENT);
-
         Ok(r.is_relative_allowed(target_path))
     }
 

@@ -46,7 +46,7 @@ async fn main() {
 
     // add seed in the first run
     //add_seed(redis_repo.clone()).await;
-
+/*
     for i in 0..WORKERS {
         let r_repo = redis_repo.clone();
         let p_repo = pg_repo.clone();
@@ -61,7 +61,10 @@ async fn main() {
     tokio::signal::ctrl_c()
         .await
         .expect("failed to listen for event");
-    println!("Shutting down...");
+    println!("Shutting down...");*/
+
+    let test = worker::process_instance("thewordharbor.com", &http_client, &redis_repo).await.expect("Failed to start instance");
+    println!("{}", test.0);
 }
 
 async fn add_seed(redis_repository: RedisRepository) {
