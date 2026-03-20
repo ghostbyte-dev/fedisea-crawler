@@ -114,11 +114,6 @@ pub async fn process_instance(
 
     let nodeinfo_url = Url::parse(nodeinfo_url)
         .map_err(|_| CrawlerError::InvalidMetadata)?;
-    let nodeinfo_url_domain_normalized = nodeinfo_url.domain().unwrap();
-
-    if nodeinfo_url_domain_normalized != instance {
-        return Err(CrawlerError::Mismatched(nodeinfo_url_domain_normalized.parse().unwrap()));
-    }
 
     let info = http
         .fetch_nodeinfo(nodeinfo_url.as_ref())
