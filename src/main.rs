@@ -73,7 +73,7 @@ async fn main() {
 
     // add seed in the first run
     //add_seed(redis_repo.clone()).await;
-    /*for i in 0..WORKERS {
+    for i in 0..WORKERS {
         let r_repo = redis_repo.clone();
         let p_repo = pg_repo.clone();
         let h_client = http_client.clone();
@@ -101,10 +101,9 @@ async fn main() {
         .await
         .expect("failed to listen for event");
     println!("Shutting down...");
-
-     */
-    let test = worker::process_instance("mastodon.social", &http_client, &redis_repo, &domain_resolver, &asn_reader, &country_reader, &city_reader).await.expect("Failed to process instance");
-    println!("{:?}", test.3.unwrap().country_iso_code)
+    
+   // let test = worker::process_instance("mastodon.social", &http_client, &redis_repo, &domain_resolver, &asn_reader, &country_reader, &city_reader).await.expect("Failed to process instance");
+    //println!("{:?}", test.3.unwrap().country_iso_code)
 }
 
 async fn add_seed(redis_repository: RedisRepository) {
