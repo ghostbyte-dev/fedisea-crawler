@@ -63,7 +63,7 @@ impl HttpClient {
     pub async fn fetch_nodeinfo(&self, url: Url, version: f32) -> Result<Nodeinfo, anyhow::Error> {
         match version {
             v if v == 1.0 || v == 1.1 => self.fetch_nodeinfo_v1(url).await,
-            v if v == 2.0 || v == 2.1 => self.fetch_nodeinfo_v2(url).await,
+            v if v >= 2.0 => self.fetch_nodeinfo_v2(url).await,
             _ => Err(anyhow::anyhow!("Unsupported NodeInfo version: {}", version)),
         }
     }
