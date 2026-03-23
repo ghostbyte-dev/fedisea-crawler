@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use serde::Deserialize;
+use serde_json::Value;
 use thiserror::Error;
 
 #[derive(Deserialize)]
@@ -26,7 +27,8 @@ pub struct Nodeinfo {
     pub software: Software,
     pub open_registrations: bool,
     pub protocols: Vec<String>,
-    pub usage: Usage
+    pub usage: Usage,
+    pub metadata: Option<Value>
 }
 
 #[derive(Deserialize)]
@@ -35,7 +37,8 @@ pub struct NodeinfoV1 {
     pub software: Software,
     pub open_registrations: bool,
     pub protocols: NodeinfoV1Protocols,
-    pub usage: Usage
+    pub usage: Usage,
+    pub metadata: Option<Value>
 }
 
 #[derive(Deserialize)]
@@ -44,7 +47,8 @@ pub struct NodeinfoV2 {
     pub software: Software,
     pub open_registrations: bool,
     pub protocols: Vec<String>,
-    pub usage: Usage
+    pub usage: Usage,
+    pub metadata: Option<Value>
 }
 
 impl From<NodeinfoV1> for Nodeinfo {
@@ -57,6 +61,7 @@ impl From<NodeinfoV1> for Nodeinfo {
             open_registrations: m.open_registrations,
             protocols: combined.into_iter().collect(),
             usage: m.usage,
+            metadata: m.metadata
         }
     }
 }
@@ -68,6 +73,7 @@ impl From<NodeinfoV2> for Nodeinfo {
             open_registrations: m.open_registrations,
             protocols: m.protocols,
             usage: m.usage,
+            metadata: m.metadata
         }
     }
 }

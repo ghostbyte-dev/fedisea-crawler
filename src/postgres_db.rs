@@ -35,9 +35,9 @@ impl PostgresRepository {
         INSERT INTO instance (
             domain, software_id, software_version, open_registration,
             total_users, active_users_month, active_users_halfyear,
-            local_posts, local_comments, status, title, description, email, thumbnail, source_url
+            local_posts, local_comments, status, title, description, email, thumbnail, source_url, metadata
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         ON CONFLICT (domain)
         DO UPDATE SET
             software_id = EXCLUDED.software_id,
@@ -54,6 +54,7 @@ impl PostgresRepository {
             email = EXCLUDED.email,
             thumbnail = EXCLUDED.thumbnail,
             source_url = EXCLUDED.source_url,
+            metadata = EXCLUDED.metadata,
             points_to = NULL,
             last_seen = NOW()
         WHERE instance.status != 'BLOCKED';
@@ -86,6 +87,7 @@ impl PostgresRepository {
             .bind(instance_info.as_ref().map(|i| &i.email))
             .bind(instance_info.as_ref().map(|i| &i.thumbnail))
             .bind(instance_info.as_ref().map(|i| &i.source_url))
+            .bind(&nodeinfo.metadata)
             .execute(&mut *tx)
             .await?;
 

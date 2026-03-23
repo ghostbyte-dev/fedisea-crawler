@@ -10,7 +10,7 @@ redis = { version = "1.0.4", features = ["tokio-comp", "connection-manager", "r2
 reqwest = { version = "0.13.2", features = ["json"] }
 anyhow = "1.0"
 serde = { version = "1.0.228", features = ["derive"] }
-sqlx = { version = "0.8.6", features = [ "postgres", "runtime-tokio", "tls-rustls" ] }
+sqlx = { version = "0.8.6", features = [ "postgres", "runtime-tokio", "tls-rustls", "json" ] }
 dotenvy = "0.15"
 robotxt = "0.6.1"
 regex = "1.12.3"
