@@ -1,16 +1,25 @@
 use crate::client::HttpClient;
 use crate::db::RedisRepository;
 use crate::domain_filter::is_valid;
-use crate::models::{CrawlerError, InstanceInfo, InstanceStatus, Nodeinfo, WellKnown};
+use crate::location_lookup::{
+    lookup_asn_organisation, lookup_country, lookup_ip, lookup_ip_metadata,
+};
+use crate::models::{CrawlerError, InstanceInfo, InstanceStatus, IpMetadata, Nodeinfo, WellKnown};
 use crate::postgres_db::PostgresRepository;
+use hickory_resolver::Resolver;
+use hickory_resolver::name_server::GenericConnector;
+use hickory_resolver::proto::runtime::TokioRuntimeProvider;
+use maxminddb::{Mmap, Reader};
 use reqwest::Url;
-use futures::stream::{StreamExt, FuturesUnordered};
-use tokio::time::interval;
 
 pub async fn run_worker(
     redis_repo: RedisRepository,
     postgres_repository: PostgresRepository,
     http_client: HttpClient,
+    ip_resolver: &Resolver<GenericConnector<TokioRuntimeProvider>>,
+    asn_reader: &Reader<Mmap>,
+    country_reader: &Reader<Mmap>,
+    city_reader: &Reader<Mmap>,
 ) {
     println!("Running worker");
     loop {
@@ -20,18 +29,32 @@ pub async fn run_worker(
                     .duration_since(std::time::UNIX_EPOCH)
                     .expect("Time went backwards")
                     .as_secs() as i64;
-                match process_instance(&instance, &http_client, &redis_repo).await {
-                    Ok((instance, nodeinfo, instance_info, delay)) => {
+                match process_instance(
+                    &instance,
+                    &http_client,
+                    &redis_repo,
+                    &ip_resolver,
+                    &asn_reader,
+                    &country_reader,
+                    &city_reader,
+                )
+                .await
+                {
+                    Ok((instance, nodeinfo, instance_info, ip_metadata, delay)) => {
                         redis_repo.reset_failure(&instance).await;
                         let db_result = postgres_repository
-                            .save_data(instance.to_string(), nodeinfo, instance_info)
+                            .save_data(instance.to_string(), nodeinfo, instance_info, ip_metadata)
                             .await;
                         match db_result {
                             Ok(is_saved) => {
                                 if is_saved {
                                     redis_repo.enqueue_job(&instance, now + delay).await.ok();
                                 } else {
-                                    println!("Skipping re-queue for {}: Instance is blocked.", instance);                                }
+                                    println!(
+                                        "Skipping re-queue for {}: Instance is blocked.",
+                                        instance
+                                    );
+                                }
                             }
                             Err(e) => {
                                 println!("Database error: {}", e)
@@ -95,9 +118,9 @@ pub fn find_latest_nodeinfo_url(well_known: &WellKnown) -> Result<(String, f32),
         .iter()
         .filter_map(|link| {
             let version_str = link.rel.strip_prefix(NODEINFO_BASE_REL)?;
-            
+
             let version = version_str.parse::<f32>().ok()?;
-            
+
             Some((version, link.href.trim().to_string()))
         })
         .max_by(|(v1, _), (v2, _)| v1.partial_cmp(v2).unwrap_or(std::cmp::Ordering::Equal))
@@ -109,7 +132,20 @@ pub async fn process_instance(
     instance: &str,
     http: &HttpClient,
     redis_repo: &RedisRepository,
-) -> anyhow::Result<(String, Nodeinfo, Option<InstanceInfo>, i64), CrawlerError> {
+    ip_resolver: &Resolver<GenericConnector<TokioRuntimeProvider>>,
+    asn_reader: &Reader<Mmap>,
+    country_reader: &Reader<Mmap>,
+    city_reader: &Reader<Mmap>
+) -> anyhow::Result<
+    (
+        String,
+        Nodeinfo,
+        Option<InstanceInfo>,
+        Option<IpMetadata>,
+        i64,
+    ),
+    CrawlerError,
+> {
     match http.are_robots_allowed(instance).await {
         Ok(true) => {}
         Ok(false) => return Err(CrawlerError::RobotsForbidden(instance.to_string())),
@@ -124,17 +160,23 @@ pub async fn process_instance(
     if well_known.1 != instance {
         return Err(CrawlerError::Mismatched(well_known.1));
     }
-    
-    let (url, version) = find_latest_nodeinfo_url(&well_known.0)
-         .map_err(|_| CrawlerError::InvalidMetadata)?;
 
-    let nodeinfo_url = Url::parse(&url.as_str())
-        .map_err(|_| CrawlerError::InvalidMetadata)?;
+    let (url, version) =
+        find_latest_nodeinfo_url(&well_known.0).map_err(|_| CrawlerError::InvalidMetadata)?;
+
+    let nodeinfo_url = Url::parse(&url.as_str()).map_err(|_| CrawlerError::InvalidMetadata)?;
 
     let info = http
         .fetch_nodeinfo(nodeinfo_url, version)
         .await
         .map_err(|e| CrawlerError::NetworkError(e.to_string()))?;
+
+    let ip_metadata;
+    if let Ok(ip) = lookup_ip(instance, ip_resolver).await {
+        ip_metadata = lookup_ip_metadata(ip, &asn_reader, &country_reader, &city_reader).ok();
+    } else {
+        ip_metadata = None
+    }
 
     let instance_info: Option<InstanceInfo> = match info.software.name.as_str() {
         "mastodon" | "pixelfed" | "pleroma" => {
@@ -147,7 +189,13 @@ pub async fn process_instance(
     };
 
     handle_peers(redis_repo, http, instance.parse().unwrap()).await;
-    Ok((instance.parse().unwrap(), info, instance_info, 604800))
+    Ok((
+        instance.parse().unwrap(),
+        info,
+        instance_info,
+        ip_metadata,
+        604800,
+    ))
 }
 
 async fn handle_peers(redis_repo: &RedisRepository, http: &HttpClient, instance: String) {

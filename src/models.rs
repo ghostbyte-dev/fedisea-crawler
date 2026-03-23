@@ -247,3 +247,9 @@ impl From<MisskeyInfoResponse> for InstanceInfo {
         }
     }
 }
+
+pub struct IpMetadata {
+    pub organisation: String,
+    pub country_iso_code: String,
+    pub city_name: String
+}

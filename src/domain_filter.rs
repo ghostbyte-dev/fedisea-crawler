@@ -1,5 +1,3 @@
-use regex::Regex;
-
 pub fn is_valid(domain: &str) -> bool {
 
     //TODO: improve is valid function

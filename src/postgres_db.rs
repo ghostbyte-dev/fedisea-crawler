@@ -1,4 +1,4 @@
-use crate::models::{InstanceInfo, InstanceStatus, Nodeinfo};
+use crate::models::{InstanceInfo, InstanceStatus, IpMetadata, Nodeinfo};
 use sqlx::PgPool;
 
 #[derive(Clone)]
@@ -16,28 +16,27 @@ impl PostgresRepository {
         instance: String,
         nodeinfo: Nodeinfo,
         instance_info: Option<InstanceInfo>,
+        ip_metadata: Option<IpMetadata>,
     ) -> Result<bool, sqlx::Error> {
-
         // 1. Start a transaction
         let mut tx = self.pool.begin().await?;
 
         sqlx::query(
-        "INSERT INTO software (identifier)
+            "INSERT INTO software (identifier)
          VALUES ($1)
-         ON CONFLICT (identifier) DO NOTHING"
-    )
-            .bind(&nodeinfo.software.name)
-            .execute(&mut *tx)
-            .await?;
-
+         ON CONFLICT (identifier) DO NOTHING",
+        )
+        .bind(&nodeinfo.software.name)
+        .execute(&mut *tx)
+        .await?;
 
         let query = "
         INSERT INTO instance (
             domain, software_id, software_version, open_registration,
             total_users, active_users_month, active_users_halfyear,
-            local_posts, local_comments, status, title, description, email, thumbnail, source_url, metadata
+            local_posts, local_comments, status, title, description, email, thumbnail, source_url, metadata, asn_name, city, country
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         ON CONFLICT (domain)
         DO UPDATE SET
             software_id = EXCLUDED.software_id,
@@ -55,6 +54,9 @@ impl PostgresRepository {
             thumbnail = EXCLUDED.thumbnail,
             source_url = EXCLUDED.source_url,
             metadata = EXCLUDED.metadata,
+            asn_name = EXCLUDED.asn_name,
+            city = EXCLUDED.city,
+            country = EXCLUDED.country,
             points_to = NULL,
             last_seen = NOW()
         WHERE instance.status != 'BLOCKED';
@@ -88,6 +90,9 @@ impl PostgresRepository {
             .bind(instance_info.as_ref().map(|i| &i.thumbnail))
             .bind(instance_info.as_ref().map(|i| &i.source_url))
             .bind(&nodeinfo.metadata)
+            .bind(ip_metadata.as_ref().map(|m| &m.organisation))
+            .bind(ip_metadata.as_ref().map(|m| &m.country_iso_code))
+            .bind(ip_metadata.as_ref().map(|m| &m.city_name))
             .execute(&mut *tx)
             .await?;
 
@@ -105,14 +110,14 @@ impl PostgresRepository {
 
                 sqlx::query(
                     "INSERT INTO instance_protocol (instance_id, protocol_id)
-                     VALUES ($1, $2) ON CONFLICT DO NOTHING"
+                     VALUES ($1, $2) ON CONFLICT DO NOTHING",
                 )
                 .bind(&instance)
                 .bind(&proto_name)
                 .execute(&mut *tx)
                 .await?;
             }
-            
+
             tx.commit().await?;
             Ok(true)
         } else {

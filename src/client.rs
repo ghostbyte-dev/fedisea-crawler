@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use crate::consts::USER_AGENT;
 use crate::models::{
     InstanceInfo, LemmyInfoResponse, MastodonV2Response, MisskeyInfoResponse, Nodeinfo, NodeinfoV1, NodeinfoV2, PeertubeInfoResponse, WellKnown
@@ -6,6 +7,7 @@ use reqwest::{Client, Url};
 use robotxt::Robots;
 use serde_json::json;
 use std::time::Duration;
+use maxminddb::{geoip2, Reader};
 
 #[derive(Clone)]
 pub struct HttpClient {
