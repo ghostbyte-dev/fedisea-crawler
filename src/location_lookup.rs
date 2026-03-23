@@ -15,9 +15,9 @@ pub async fn lookup_ip(domain: &str, resolver: &Resolver<GenericConnector<TokioR
 }
 
 pub fn lookup_ip_metadata(ip_addr: IpAddr, asn_reader: &Reader<Mmap>, country_reader: &Reader<Mmap>, city_reader: &Reader<Mmap>) -> Result<IpMetadata, anyhow::Error> {
-    let asn_name = lookup_asn_organisation(ip_addr, asn_reader)?;
-    let country_iso_code = lookup_country(ip_addr, country_reader)?;
-    let city_name = lookup_city(ip_addr, city_reader)?;
+    let asn_name = lookup_asn_organisation(ip_addr, asn_reader).ok();
+    let country_iso_code = lookup_country(ip_addr, country_reader).ok();
+    let city_name = lookup_city(ip_addr, city_reader).ok();
     Ok(
         IpMetadata {
             organisation: asn_name,

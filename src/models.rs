@@ -249,7 +249,7 @@ impl From<MisskeyInfoResponse> for InstanceInfo {
 }
 
 pub struct IpMetadata {
-    pub organisation: String,
-    pub country_iso_code: String,
-    pub city_name: String
+    pub organisation: Option<String>,
+    pub country_iso_code: Option<String>,
+    pub city_name: Option<String>
 }
