@@ -16,6 +16,7 @@ pub struct WellKnownElement {
 pub struct Nodeinfo {
     pub software: Software,
     pub open_registrations: bool,
+    pub protocols: Vec<String>,
     pub usage: Usage
 }
 

@@ -18,20 +18,18 @@ impl PostgresRepository {
         instance_info: Option<InstanceInfo>,
     ) -> Result<bool, sqlx::Error> {
 
+        // 1. Start a transaction
+        let mut tx = self.pool.begin().await?;
 
-        let software_result = sqlx::query(
+        sqlx::query(
         "INSERT INTO software (identifier)
          VALUES ($1)
          ON CONFLICT (identifier) DO NOTHING"
     )
             .bind(&nodeinfo.software.name)
-            .execute(&self.pool)
-            .await;
+            .execute(&mut *tx)
+            .await?;
 
-
-        if let Err(e) = software_result {
-            eprintln!("❌ Database error for inserting software {}: {}", nodeinfo.software.name, e);
-        }
 
         let query = "
         INSERT INTO instance (
@@ -62,9 +60,9 @@ impl PostgresRepository {
     ";
 
         let result = sqlx::query(query)
-            .bind(instance.clone())
-            .bind(nodeinfo.software.name)
-            .bind(nodeinfo.software.version)
+            .bind(&instance)
+            .bind(&nodeinfo.software.name)
+            .bind(&nodeinfo.software.version)
             .bind(nodeinfo.open_registrations)
             .bind(nodeinfo.usage.users.total)
             .bind(nodeinfo.usage.users.active_month)
@@ -88,17 +86,40 @@ impl PostgresRepository {
             .bind(instance_info.as_ref().map(|i| &i.email))
             .bind(instance_info.as_ref().map(|i| &i.thumbnail))
             .bind(instance_info.as_ref().map(|i| &i.source_url))
-            .execute(&self.pool)
-            .await;
+            .execute(&mut *tx)
+            .await?;
 
-        match result {
-            Ok(pg_result) => {
-                Ok(pg_result.rows_affected() > 0)
+        // 3. Handle Protocols only if the instance wasn't blocked
+        if result.rows_affected() > 0 {
+            // Remove old string-based associations
+            sqlx::query("DELETE FROM instance_protocol WHERE instance_domain = $1")
+                .bind(&instance)
+                .execute(&mut *tx)
+                .await?;
+
+            for proto_name in nodeinfo.protocols {
+                // Ensure protocol slug exists
+                sqlx::query("INSERT INTO protocol (name) VALUES ($1) ON CONFLICT DO NOTHING")
+                    .bind(&proto_name)
+                    .execute(&mut *tx)
+                    .await?;
+
+                // Link Domain String to Protocol String
+                sqlx::query(
+                    "INSERT INTO instance_protocol (instance_domain, protocol_name) 
+                     VALUES ($1, $2) ON CONFLICT DO NOTHING"
+                )
+                .bind(&instance)
+                .bind(&proto_name)
+                .execute(&mut *tx)
+                .await?;
             }
-            Err(e) => {
-                eprintln!("❌ Database error for {}: {}", instance, e);
-                Err(e)
-            }
+            
+            tx.commit().await?;
+            Ok(true)
+        } else {
+            tx.rollback().await?;
+            Ok(false)
         }
     }
 
