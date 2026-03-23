@@ -28,6 +28,8 @@ services:
     networks:
       - crawler-network
       - fedisea-network
+    volumes:
+      - geoipupdate_data:/usr/share/GeoIP:ro
     deploy:
       resources:
         limits:
@@ -51,7 +53,6 @@ services:
 volumes:
   redis-data:
     driver: local
-  postgres_data:
   geoipupdate_data:
     driver: local
 
