@@ -89,24 +89,20 @@ impl PostgresRepository {
             .execute(&mut *tx)
             .await?;
 
-        // 3. Handle Protocols only if the instance wasn't blocked
         if result.rows_affected() > 0 {
-            // Remove old string-based associations
-            sqlx::query("DELETE FROM instance_protocol WHERE instance_domain = $1")
+            sqlx::query("DELETE FROM instance_protocol WHERE instance_id = $1")
                 .bind(&instance)
                 .execute(&mut *tx)
                 .await?;
 
             for proto_name in nodeinfo.protocols {
-                // Ensure protocol slug exists
-                sqlx::query("INSERT INTO protocol (name) VALUES ($1) ON CONFLICT DO NOTHING")
+                sqlx::query("INSERT INTO protocol (identifier) VALUES ($1) ON CONFLICT DO NOTHING")
                     .bind(&proto_name)
                     .execute(&mut *tx)
                     .await?;
 
-                // Link Domain String to Protocol String
                 sqlx::query(
-                    "INSERT INTO instance_protocol (instance_domain, protocol_name) 
+                    "INSERT INTO instance_protocol (instance_id, protocol_id)
                      VALUES ($1, $2) ON CONFLICT DO NOTHING"
                 )
                 .bind(&instance)

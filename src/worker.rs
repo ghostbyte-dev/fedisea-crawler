@@ -33,7 +33,9 @@ pub async fn run_worker(
                                 } else {
                                     println!("Skipping re-queue for {}: Instance is blocked.", instance);                                }
                             }
-                            Err(e) => {}
+                            Err(e) => {
+                                println!("Database error: {}", e)
+                            }
                         }
                     }
                     Err(CrawlerError::RobotsForbidden(instance)) => {
