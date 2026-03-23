@@ -31,10 +31,27 @@ services:
         limits:
           cpus: '0.50'
           memory: 512M
+  geoipupdate:
+    container_name: geoipupdate
+    image: ghcr.io/maxmind/geoipupdate
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - GEOIPUPDATE_ACCOUNT_ID=${MAXMIND_ACCOUNT_ID}
+      - GEOIPUPDATE_LICENSE_KEY=${MAXMIND_LICENSE_KEY}
+      - 'GEOIPUPDATE_EDITION_IDS=GeoLite2-ASN GeoLite2-City GeoLite2-Country'
+      - GEOIPUPDATE_FREQUENCY=72
+    networks:
+      - crawler-network
+    volumes:
+      - 'geoipupdate_data:/usr/share/GeoIP'
+
 volumes:
   redis-data:
     driver: local
   postgres_data:
+  geoipupdate_data:
+    driver: local
 
 networks:
   crawler-network:
