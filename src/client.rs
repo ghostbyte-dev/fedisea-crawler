@@ -1,12 +1,11 @@
 use crate::consts::USER_AGENT;
 use crate::models::{
-    InstanceInfo, LemmyInfoResponse, MastodonV2Response, MisskeyInfoResponse, Nodeinfo,
-    PeertubeInfoResponse, WellKnown,
+    InstanceInfo, LemmyInfoResponse, MastodonV2Response, MisskeyInfoResponse, Nodeinfo, NodeinfoV1, NodeinfoV2, PeertubeInfoResponse, WellKnown
 };
 use reqwest::{Client, Url};
 use robotxt::Robots;
-use std::time::Duration;
 use serde_json::json;
+use std::time::Duration;
 
 #[derive(Clone)]
 pub struct HttpClient {
@@ -61,10 +60,16 @@ impl HttpClient {
         Ok(res)
     }
 
-    pub async fn fetch_nodeinfo(&self, url: &str) -> Result<Nodeinfo, anyhow::Error> {
-        let url = Url::parse(url)?;
+    pub async fn fetch_nodeinfo(&self, url: Url, version: f32) -> Result<Nodeinfo, anyhow::Error> {
+        match version {
+            v if v == 1.0 || v == 1.1 => self.fetch_nodeinfo_v1(url).await,
+            v if v == 2.0 || v == 2.1 => self.fetch_nodeinfo_v2(url).await,
+            _ => Err(anyhow::anyhow!("Unsupported NodeInfo version: {}", version)),
+        }
+    }
 
-        let res: Nodeinfo = self
+    pub async fn fetch_nodeinfo_v1(&self, url: Url) -> Result<Nodeinfo, anyhow::Error> {
+        let res: NodeinfoV1 = self
             .http
             .get(url)
             .send()
@@ -72,11 +77,22 @@ impl HttpClient {
             .error_for_status()?
             .json()
             .await?;
-        Ok(res)
+        Ok(res.into())
+    }
+
+    pub async fn fetch_nodeinfo_v2(&self, url: Url) -> Result<Nodeinfo, anyhow::Error> {
+        let res: NodeinfoV2 = self
+            .http
+            .get(url)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        Ok(res.into())
     }
 
     pub async fn are_robots_allowed(&self, instance: &str) -> Result<bool, anyhow::Error> {
-
         let Ok(domain) = Url::parse(&format!("https://{}", instance)) else {
             return Err(anyhow::anyhow!("Invalid Instance url {}", instance));
         };
@@ -87,9 +103,12 @@ impl HttpClient {
             domain.host_str().unwrap_or("")
         );
 
-        let response = self.http.get(&robots_url).send().await.map_err(|e| {
-            anyhow::anyhow!("Network error: {}", e)
-        })?;
+        let response = self
+            .http
+            .get(&robots_url)
+            .send()
+            .await
+            .map_err(|e| anyhow::anyhow!("Network error: {}", e))?;
 
         let status = response.status();
         let body = if status.is_success() {

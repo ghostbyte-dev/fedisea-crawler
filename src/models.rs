@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -8,7 +10,14 @@ pub struct WellKnown {
 
 #[derive(Deserialize)]
 pub struct WellKnownElement {
+    pub rel: String,
     pub href: String,
+}
+
+#[derive(Deserialize)]
+pub struct NodeinfoV1Protocols {
+    pub inbound: Vec<String>,
+    pub outbound: Vec<String>
 }
 
 #[derive(Deserialize)]
@@ -18,6 +27,49 @@ pub struct Nodeinfo {
     pub open_registrations: bool,
     pub protocols: Vec<String>,
     pub usage: Usage
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeinfoV1 {
+    pub software: Software,
+    pub open_registrations: bool,
+    pub protocols: NodeinfoV1Protocols,
+    pub usage: Usage
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeinfoV2 {
+    pub software: Software,
+    pub open_registrations: bool,
+    pub protocols: Vec<String>,
+    pub usage: Usage
+}
+
+impl From<NodeinfoV1> for Nodeinfo {
+    fn from(m: NodeinfoV1) -> Self {
+        let mut combined: HashSet<String> = m.protocols.inbound.into_iter().collect();
+        combined.extend(m.protocols.outbound);
+
+        Self {
+            software: m.software,
+            open_registrations: m.open_registrations,
+            protocols: combined.into_iter().collect(),
+            usage: m.usage,
+        }
+    }
+}
+
+impl From<NodeinfoV2> for Nodeinfo {
+    fn from(m: NodeinfoV2) -> Self {
+        Self {
+            software: m.software,
+            open_registrations: m.open_registrations,
+            protocols: m.protocols,
+            usage: m.usage,
+        }
+    }
 }
 
 #[derive(Deserialize)]

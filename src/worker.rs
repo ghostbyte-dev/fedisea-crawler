@@ -85,6 +85,24 @@ pub async fn run_worker(
     }
 }
 
+const NODEINFO_BASE_REL: &str = "http://nodeinfo.diaspora.software/ns/schema/";
+
+pub fn find_latest_nodeinfo_url(well_known: &WellKnown) -> Result<(String, f32), anyhow::Error> {
+    well_known
+        .links
+        .iter()
+        .filter_map(|link| {
+            let version_str = link.rel.strip_prefix(NODEINFO_BASE_REL)?;
+            
+            let version = version_str.parse::<f32>().ok()?;
+            
+            Some((version, link.href.trim().to_string()))
+        })
+        .max_by(|(v1, _), (v2, _)| v1.partial_cmp(v2).unwrap_or(std::cmp::Ordering::Equal))
+        .map(|(version, href)| (href, version))
+        .ok_or_else(|| anyhow::anyhow!("Required NodeInfo rel format not found"))
+}
+
 pub async fn process_instance(
     instance: &str,
     http: &HttpClient,
@@ -104,19 +122,15 @@ pub async fn process_instance(
     if well_known.1 != instance {
         return Err(CrawlerError::Mismatched(well_known.1));
     }
-    let nodeinfo_url = well_known
-        .0
-        .links
-        .first()
-        .ok_or(CrawlerError::InvalidMetadata)?
-        .href
-        .trim();
+    
+    let (url, version) = find_latest_nodeinfo_url(&well_known.0)
+         .map_err(|_| CrawlerError::InvalidMetadata)?;
 
-    let nodeinfo_url = Url::parse(nodeinfo_url)
+    let nodeinfo_url = Url::parse(&url.as_str())
         .map_err(|_| CrawlerError::InvalidMetadata)?;
 
     let info = http
-        .fetch_nodeinfo(nodeinfo_url.as_ref())
+        .fetch_nodeinfo(nodeinfo_url, version)
         .await
         .map_err(|e| CrawlerError::NetworkError(e.to_string()))?;
 
