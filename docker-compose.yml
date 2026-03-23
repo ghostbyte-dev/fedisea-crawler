@@ -17,6 +17,8 @@ services:
     image: ghcr.io/ghostbyte-dev/fedisea-crawler:latest
     container_name: rust-crawler
     restart: always
+    env_file:
+      - .env
     environment:
       - REDIS_URL=${REDIS_URL}
       - DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
