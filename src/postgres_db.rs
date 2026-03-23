@@ -91,8 +91,8 @@ impl PostgresRepository {
             .bind(instance_info.as_ref().map(|i| &i.source_url))
             .bind(&nodeinfo.metadata)
             .bind(ip_metadata.as_ref().map(|m| &m.organisation))
-            .bind(ip_metadata.as_ref().map(|m| &m.country_iso_code))
             .bind(ip_metadata.as_ref().map(|m| &m.city_name))
+            .bind(ip_metadata.as_ref().map(|m| &m.country_iso_code))
             .execute(&mut *tx)
             .await?;
 
