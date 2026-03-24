@@ -14,8 +14,11 @@ impl RedisRepository {
 
     pub async fn mark_as_seen(&self, domain: &str) -> Result<bool, anyhow::Error> {
         let mut conn = self.manager.clone();
-
-        let added: i32 = conn.sadd("crawler:seen_set", domain).await?;
+        let without_www = if domain.starts_with("www.") {
+            &domain[4..]
+        } else {
+            &domain
+        };        let added: i32 = conn.sadd("crawler:seen_set", without_www).await?;
         Ok(added == 1)
     }
 
